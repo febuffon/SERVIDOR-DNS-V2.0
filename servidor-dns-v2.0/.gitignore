@@ -1,0 +1,14 @@
+# Arquivos de ambiente com senhas reais — NUNCA commitar
+.env
+*/.env
+clickhouse/data/
+clickhouse/logs/
+grafana/data/
+dnstap-collector/dnstap.sock
+*.sock
+
+# Binario compilado
+dnstap-collector/dnstap-collector
+
+# Logs
+*.log

@@ -1,0 +1,6 @@
+# Ignora tudo na raiz
+*
+!servidor-dns-v2.0/
+!servidor-dns-v2.0/**
+!.gitignore
+!README.md

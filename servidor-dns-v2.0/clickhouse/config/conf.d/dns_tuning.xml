@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<!--
+  dns_tuning.xml - Tuning para DNS Telemetry
+  Mantem background_pool_size no padrao (16) para evitar conflitos
+-->
+<clickhouse>
+
+    <!-- Prometheus metrics endpoint (porta 9363) para Zabbix/Grafana -->
+    <prometheus>
+        <endpoint>/metrics</endpoint>
+        <port>9363</port>
+        <metrics>true</metrics>
+        <events>true</events>
+        <asynchronous_metrics>true</asynchronous_metrics>
+        <errors>true</errors>
+    </prometheus>
+
+</clickhouse>

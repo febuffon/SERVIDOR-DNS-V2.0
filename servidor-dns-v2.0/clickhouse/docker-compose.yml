@@ -1,0 +1,75 @@
+version: "3.9"
+
+# ============================================================
+# ClickHouse - DNS Telemetry Stack
+# Servidor: Ubuntu 22.04 | 8 vCPU | 13GB RAM | NVMe
+# Compativel com pipeline dnstap -> ClickHouse -> Grafana
+# ============================================================
+
+services:
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.6-alpine
+    container_name: clickhouse
+    restart: unless-stopped
+    hostname: clickhouse
+
+    # Rede do host para performance maxima (sem NAT overhead)
+    # ClickHouse escuta em 0.0.0.0:8123 (HTTP) e 0.0.0.0:9000 (native)
+    # Proteja via firewall no host (nftables/ufw)
+    network_mode: host
+
+    environment:
+      CLICKHOUSE_USER: admin
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-changeme}
+      CLICKHOUSE_DB: dns_telemetry
+
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+      nproc:
+        soft: 131072
+        hard: 131072
+
+    volumes:
+      # Dados persistentes (named volume)
+      - clickhouse-data:/var/lib/clickhouse
+
+      # Logs persistentes
+      - clickhouse-logs:/var/log/clickhouse-server
+
+      # Configuracao customizada
+      - ./config/config.xml:/etc/clickhouse-server/config.xml:ro
+      - ./config/conf.d/dns_tuning.xml:/etc/clickhouse-server/config.d/dns_tuning.xml:ro
+
+      # Scripts de inicializacao do schema
+      - ./initdb:/docker-entrypoint-initdb.d:ro
+
+    # Limites de recursos - reserva para Unbound + Redis no mesmo host
+    # 8 vCPU: ClickHouse usa ate 6, deixa 2 para DNS
+    # 13GB RAM: ClickHouse usa ate 8GB, deixa 5GB para DNS/OS
+    deploy:
+      resources:
+        limits:
+          cpus: "6"
+          memory: 8G
+        reservations:
+          cpus: "2"
+          memory: 2G
+
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8123/ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "3"
+
+volumes:
+  clickhouse-data:
+  clickhouse-logs:

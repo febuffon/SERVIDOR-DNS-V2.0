@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>DNS Telemetry — ClickHouse</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: #0f1117;
+      color: #e2e8f0;
+      min-height: 100vh;
+    }
+
+    /* ── HEADER ── */
+    header {
+      background: linear-gradient(135deg, #1a1f2e 0%, #16213e 100%);
+      border-bottom: 1px solid #2d3748;
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    header .logo {
+      font-size: 22px;
+      font-weight: 700;
+      color: #63b3ed;
+      letter-spacing: -0.5px;
+    }
+    header .logo span { color: #fc8181; }
+    header .subtitle {
+      font-size: 12px;
+      color: #718096;
+      margin-top: 2px;
+    }
+    .header-right {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .status-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: #68d391;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+    .status-text { font-size: 12px; color: #68d391; }
+
+    /* ── LAYOUT ── */
+    .container { display: flex; height: calc(100vh - 61px); }
+
+    /* ── SIDEBAR ── */
+    .sidebar {
+      width: 220px;
+      background: #1a1f2e;
+      border-right: 1px solid #2d3748;
+      padding: 16px 0;
+      overflow-y: auto;
+      flex-shrink: 0;
+    }
+    .sidebar-section {
+      padding: 8px 16px 4px;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #4a5568;
+      font-weight: 600;
+    }
+    .query-btn {
+      display: block;
+      width: 100%;
+      text-align: left;
+      padding: 9px 16px;
+      background: none;
+      border: none;
+      color: #a0aec0;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.15s;
+      border-left: 3px solid transparent;
+    }
+    .query-btn:hover {
+      background: #2d3748;
+      color: #e2e8f0;
+      border-left-color: #63b3ed;
+    }
+    .query-btn.active {
+      background: #2a3550;
+      color: #63b3ed;
+      border-left-color: #63b3ed;
+    }
+    .query-btn .icon { margin-right: 8px; }
+
+    /* ── MAIN ── */
+    .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+    /* ── EDITOR ── */
+    .editor-area {
+      padding: 16px;
+      border-bottom: 1px solid #2d3748;
+      background: #141720;
+    }
+    .editor-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .editor-label { font-size: 12px; color: #718096; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+    .btn-run {
+      margin-left: auto;
+      background: #3182ce;
+      color: #fff;
+      border: none;
+      padding: 8px 20px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn-run:hover { background: #2b6cb0; }
+    .btn-run:active { background: #2c5282; }
+    .btn-run.loading { background: #4a5568; cursor: not-allowed; }
+
+    textarea#query {
+      width: 100%;
+      height: 120px;
+      background: #0f1117;
+      border: 1px solid #2d3748;
+      border-radius: 8px;
+      color: #e2e8f0;
+      font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+      font-size: 13px;
+      padding: 12px;
+      resize: vertical;
+      outline: none;
+      transition: border-color 0.15s;
+      line-height: 1.6;
+    }
+    textarea#query:focus { border-color: #3182ce; }
+
+    /* ── STATS BAR ── */
+    .stats-bar {
+      display: flex;
+      gap: 24px;
+      padding: 8px 16px;
+      background: #1a1f2e;
+      border-bottom: 1px solid #2d3748;
+      font-size: 12px;
+      color: #718096;
+      min-height: 36px;
+      align-items: center;
+    }
+    .stats-bar span { color: #a0aec0; }
+    .stats-bar b { color: #63b3ed; }
+    .error-msg { color: #fc8181; font-size: 12px; }
+
+    /* ── RESULTS ── */
+    .results-area {
+      flex: 1;
+      overflow: auto;
+      padding: 0;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    thead th {
+      position: sticky;
+      top: 0;
+      background: #1e2535;
+      color: #63b3ed;
+      font-weight: 600;
+      padding: 10px 14px;
+      text-align: left;
+      border-bottom: 2px solid #2d3748;
+      white-space: nowrap;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+    tbody tr { border-bottom: 1px solid #1e2535; transition: background 0.1s; }
+    tbody tr:hover { background: #1e2535; }
+    tbody td {
+      padding: 9px 14px;
+      color: #e2e8f0;
+      max-width: 400px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-family: 'Cascadia Code', 'Fira Code', monospace;
+      font-size: 12px;
+    }
+
+    /* Badges RCODE */
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .badge-ok { background: #1a3a1a; color: #68d391; }
+    .badge-nx { background: #3a1a1a; color: #fc8181; }
+    .badge-sf { background: #3a2a1a; color: #f6ad55; }
+    .badge-other { background: #2a2a3a; color: #a0aec0; }
+
+    /* ── EMPTY STATE ── */
+    .empty {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: #4a5568;
+      gap: 12px;
+    }
+    .empty .big-icon { font-size: 48px; }
+    .empty p { font-size: 14px; }
+
+    /* ── SCROLLBAR ── */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #1a1f2e; }
+    ::-webkit-scrollbar-thumb { background: #2d3748; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #4a5568; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="logo">DNS <span>Telemetry</span></div>
+    <div class="subtitle">ClickHouse · dns_telemetry</div>
+  </div>
+  <div class="header-right">
+    <div class="status-dot"></div>
+    <span class="status-text" id="conn-status">Conectando...</span>
+  </div>
+</header>
+
+<div class="container">
+
+  <!-- SIDEBAR -->
+  <nav class="sidebar">
+    <div class="sidebar-section">Consultas Rápidas</div>
+
+    <button class="query-btn active" onclick="loadQuery('realtime')">
+      <span class="icon">⚡</span>Tempo Real
+    </button>
+    <button class="query-btn" onclick="loadQuery('top_domains')">
+      <span class="icon">🌐</span>Top Domínios
+    </button>
+    <button class="query-btn" onclick="loadQuery('top_clients')">
+      <span class="icon">👥</span>Top Clientes
+    </button>
+    <button class="query-btn" onclick="loadQuery('nxdomain')">
+      <span class="icon">🚫</span>NXDOMAIN
+    </button>
+    <button class="query-btn" onclick="loadQuery('latency')">
+      <span class="icon">⏱</span>Latência
+    </button>
+    <button class="query-btn" onclick="loadQuery('rcode')">
+      <span class="icon">📊</span>Por RCODE
+    </button>
+    <button class="query-btn" onclick="loadQuery('qtype')">
+      <span class="icon">🔎</span>Por Tipo
+    </button>
+    <button class="query-btn" onclick="loadQuery('tld')">
+      <span class="icon">🏷</span>Por TLD
+    </button>
+
+    <div class="sidebar-section" style="margin-top:16px">Sistema</div>
+    <button class="query-btn" onclick="loadQuery('tables')">
+      <span class="icon">🗄</span>Tabelas
+    </button>
+    <button class="query-btn" onclick="loadQuery('processes')">
+      <span class="icon">⚙️</span>Processos
+    </button>
+    <button class="query-btn" onclick="loadQuery('disk')">
+      <span class="icon">💾</span>Uso de Disco
+    </button>
+  </nav>
+
+  <!-- MAIN -->
+  <div class="main">
+
+    <!-- EDITOR -->
+    <div class="editor-area">
+      <div class="editor-header">
+        <span class="editor-label">SQL</span>
+        <button class="btn-run" id="run-btn" onclick="runQuery()">
+          ▶ Executar
+        </button>
+      </div>
+      <textarea id="query" spellcheck="false" placeholder="SELECT ...">SELECT ts, client_ip, qname, qtype, rcode, latency_us
+FROM dns_telemetry.dns_queries
+ORDER BY ts DESC
+LIMIT 50</textarea>
+    </div>
+
+    <!-- STATS BAR -->
+    <div class="stats-bar" id="stats-bar">
+      <span>Pronto. Execute uma consulta.</span>
+    </div>
+
+    <!-- RESULTS -->
+    <div class="results-area" id="results">
+      <div class="empty">
+        <div class="big-icon">🔍</div>
+        <p>Execute uma consulta para ver os resultados</p>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const CH_URL  = 'http://' + location.hostname + ':8123';
+const CH_USER = 'admin';
+const CH_PASS = 'SUA_SENHA';
+
+const QUERIES = {
+  realtime: `SELECT ts, client_ip, qname, qtype, rcode, latency_us
+FROM dns_telemetry.dns_queries
+ORDER BY ts DESC
+LIMIT 50`,
+
+  top_domains: `SELECT
+    qname AS dominio,
+    count() AS total,
+    countIf(rcode = 'NXDOMAIN') AS nxdomain,
+    countIf(rcode = 'NOERROR') AS ok
+FROM dns_telemetry.dns_queries
+WHERE ts >= now() - INTERVAL 1 HOUR
+  AND message_type = 'CLIENT_RESPONSE'
+GROUP BY dominio
+ORDER BY total DESC
+LIMIT 30`,
+
+  top_clients: `SELECT
+    client_ip,
+    count() AS total,
+    countIf(rcode = 'NXDOMAIN') AS nxdomain,
+    round(countIf(rcode='NXDOMAIN') / count() * 100, 1) AS pct_nxdomain
+FROM dns_telemetry.dns_queries
+WHERE ts >= now() - INTERVAL 1 HOUR
+GROUP BY client_ip
+ORDER BY total DESC
+LIMIT 30`,
+
+  nxdomain: `SELECT
+    ts, client_ip, qname, qtype
+FROM dns_telemetry.dns_queries
+WHERE rcode = 'NXDOMAIN'
+  AND ts >= now() - INTERVAL 1 HOUR
+ORDER BY ts DESC
+LIMIT 50`,
+
+  latency: `SELECT
+    toStartOfMinute(ts) AS minuto,
+    round(avg(latency_us), 0) AS avg_us,
+    max(latency_us) AS max_us,
+    min(latency_us) AS min_us,
+    count() AS queries
+FROM dns_telemetry.dns_queries
+WHERE ts >= now() - INTERVAL 1 HOUR
+  AND latency_us > 0
+  AND message_type = 'CLIENT_RESPONSE'
+GROUP BY minuto
+ORDER BY minuto DESC`,
+
+  rcode: `SELECT
+    rcode,
+    count() AS total,
+    round(count() / sum(count()) OVER () * 100, 2) AS pct
+FROM dns_telemetry.dns_queries
+WHERE ts >= now() - INTERVAL 1 HOUR
+  AND rcode != '-'
+  AND message_type = 'CLIENT_RESPONSE'
+GROUP BY rcode
+ORDER BY total DESC`,
+
+  qtype: `SELECT
+    qtype AS tipo,
+    count() AS total,
+    round(count() / sum(count()) OVER () * 100, 2) AS pct
+FROM dns_telemetry.dns_queries
+WHERE ts >= now() - INTERVAL 1 HOUR
+GROUP BY tipo
+ORDER BY total DESC`,
+
+  tld: `SELECT
+    lower(arrayElement(splitByChar('.', qname), -1)) AS tld,
+    count() AS total
+FROM dns_telemetry.dns_queries
+WHERE ts >= now() - INTERVAL 1 HOUR
+  AND length(qname) > 0
+GROUP BY tld
+ORDER BY total DESC
+LIMIT 20`,
+
+  tables: `SELECT
+    table,
+    formatReadableSize(sum(bytes_on_disk)) AS tamanho,
+    sum(rows) AS linhas,
+    count() AS partes
+FROM system.parts
+WHERE active AND database = 'dns_telemetry'
+GROUP BY table
+ORDER BY sum(bytes_on_disk) DESC`,
+
+  processes: `SELECT
+    query_id,
+    user,
+    elapsed,
+    read_rows,
+    query
+FROM system.processes
+ORDER BY elapsed DESC`,
+
+  disk: `SELECT
+    name,
+    formatReadableSize(free_space) AS livre,
+    formatReadableSize(total_space) AS total,
+    round((1 - free_space / total_space) * 100, 1) AS uso_pct
+FROM system.disks`
+};
+
+// Verifica conexao
+async function checkConnection() {
+  try {
+    const r = await fetch(`${CH_URL}/?user=${CH_USER}&password=${CH_PASS}&query=SELECT+1`, { method: 'GET' });
+    if (r.ok) {
+      document.getElementById('conn-status').textContent = 'Conectado · 8123';
+    } else {
+      document.getElementById('conn-status').textContent = 'Erro de conexão';
+      document.getElementById('conn-status').style.color = '#fc8181';
+    }
+  } catch(e) {
+    document.getElementById('conn-status').textContent = 'Offline';
+    document.getElementById('conn-status').style.color = '#fc8181';
+  }
+}
+
+function loadQuery(name) {
+  document.querySelectorAll('.query-btn').forEach(b => b.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+  document.getElementById('query').value = QUERIES[name];
+  runQuery();
+}
+
+async function runQuery() {
+  const sql = document.getElementById('query').value.trim();
+  if (!sql) return;
+
+  const btn = document.getElementById('run-btn');
+  btn.textContent = '⏳ Executando...';
+  btn.classList.add('loading');
+
+  const statsBar = document.getElementById('stats-bar');
+  statsBar.innerHTML = '<span>Executando...</span>';
+
+  const t0 = Date.now();
+
+  try {
+    const resp = await fetch(`${CH_URL}/?user=${CH_USER}&password=${CH_PASS}&default_format=JSONCompact`, {
+      method: 'POST',
+      body: sql + ' FORMAT JSONCompact'
+    });
+
+    const elapsed = ((Date.now() - t0) / 1000).toFixed(2);
+
+    if (!resp.ok) {
+      const err = await resp.text();
+      statsBar.innerHTML = `<span class="error-msg">❌ ${err.split('\n')[0]}</span>`;
+      document.getElementById('results').innerHTML = '<div class="empty"><div class="big-icon">❌</div><p>Erro na query</p></div>';
+      return;
+    }
+
+    const data = await resp.json();
+    const rows = data.data || [];
+    const cols = (data.meta || []).map(m => m.name);
+
+    statsBar.innerHTML = `
+      <span>✅ <b>${rows.length}</b> linhas</span>
+      <span>⏱ <b>${elapsed}s</b></span>
+      <span>📖 <b>${(data.statistics?.rows_read || 0).toLocaleString()}</b> lidas</span>
+      <span>💾 <b>${formatBytes(data.statistics?.bytes_read || 0)}</b> processados</span>
+    `;
+
+    if (rows.length === 0) {
+      document.getElementById('results').innerHTML = '<div class="empty"><div class="big-icon">📭</div><p>Nenhum resultado</p></div>';
+      return;
+    }
+
+    renderTable(cols, rows);
+
+  } catch(e) {
+    statsBar.innerHTML = `<span class="error-msg">❌ ${e.message}</span>`;
+  } finally {
+    btn.textContent = '▶ Executar';
+    btn.classList.remove('loading');
+  }
+}
+
+function renderTable(cols, rows) {
+  let html = '<table><thead><tr>';
+  cols.forEach(c => { html += `<th>${c}</th>`; });
+  html += '</tr></thead><tbody>';
+
+  rows.forEach(row => {
+    html += '<tr>';
+    row.forEach((val, i) => {
+      const col = cols[i];
+      html += `<td title="${escHtml(String(val))}">${formatCell(col, val)}</td>`;
+    });
+    html += '</tr>';
+  });
+
+  html += '</tbody></table>';
+  document.getElementById('results').innerHTML = html;
+}
+
+function formatCell(col, val) {
+  const s = String(val);
+  // Badge para rcode
+  if (col === 'rcode' || col === 'RCODE') {
+    if (s === 'NOERROR') return `<span class="badge badge-ok">${s}</span>`;
+    if (s === 'NXDOMAIN') return `<span class="badge badge-nx">${s}</span>`;
+    if (s === 'SERVFAIL') return `<span class="badge badge-sf">${s}</span>`;
+    if (s === '-') return `<span class="badge badge-other">${s}</span>`;
+    return `<span class="badge badge-other">${s}</span>`;
+  }
+  return escHtml(s);
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function formatBytes(b) {
+  if (b < 1024) return b + ' B';
+  if (b < 1048576) return (b/1024).toFixed(1) + ' KB';
+  return (b/1048576).toFixed(1) + ' MB';
+}
+
+// Ctrl+Enter para executar
+document.getElementById('query').addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') runQuery();
+});
+
+// Init
+checkConnection();
+runQuery();
+</script>
+</body>
+</html>

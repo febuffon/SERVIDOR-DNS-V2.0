@@ -1,0 +1,20 @@
+apiVersion: 1
+
+datasources:
+  - name: ClickHouse-DNS
+    type: grafana-clickhouse-datasource
+    uid: clickhouse-dns
+    isDefault: true
+    editable: true
+    jsonData:
+      host: localhost
+      port: 8123
+      protocol: http
+      secure: false
+      username: admin
+      defaultDatabase: dns_telemetry
+      defaultTable: dns_queries
+      dialTimeout: 10
+      queryTimeout: 60
+    secureJsonData:
+      password: ${CLICKHOUSE_PASSWORD}

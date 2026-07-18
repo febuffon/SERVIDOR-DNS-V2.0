@@ -1,0 +1,44 @@
+services:
+  dnstap-collector:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: dnstap-collector:latest
+    container_name: dnstap-collector
+    restart: unless-stopped
+    network_mode: host
+
+    environment:
+      # Socket Unix do Unbound (mesmo path montado no container Unbound)
+      DNSTAP_SOCKET: /var/dnstap/dnstap.sock
+
+      # ClickHouse DSN
+      CLICKHOUSE_DSN: clickhouse://admin:${CLICKHOUSE_PASSWORD:-changeme}@localhost:9000/dns_telemetry
+
+      # Identificador deste servidor (aparece nos dashboards)
+      SERVER_ID: dns-cgr01
+
+      # Tamanho do batch antes de fazer INSERT
+      BATCH_SIZE: 500
+
+      # Intervalo maximo de flush mesmo sem batch cheio (ms)
+      FLUSH_INTERVAL_MS: 1000
+
+      TZ: America/Sao_Paulo
+
+    volumes:
+      # Socket compartilhado com o Unbound
+      - /home/luiz-fernando/servidor-dns-1/dnstap:/var/dnstap
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
+
+    healthcheck:
+      test: ["CMD-SHELL", "test -S /var/dnstap/dnstap.sock || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 15s

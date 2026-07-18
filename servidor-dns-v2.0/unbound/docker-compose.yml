@@ -1,0 +1,21 @@
+services:
+  unbound:
+    image: mvance/unbound:latest
+    container_name: unbound
+    hostname: unbound
+    restart: unless-stopped
+    network_mode: host
+    volumes:
+      - ./conf/unbound.conf:/opt/unbound/etc/unbound/unbound.conf
+      - unbound-root:/opt/unbound/etc/unbound/var
+      # Socket dnstap compartilhado com o coletor Go
+      - ../dnstap:/var/dnstap
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+      - SETPCAP
+    environment:
+      - TZ=America/Sao_Paulo
+
+volumes:
+  unbound-root:

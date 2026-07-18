@@ -1,0 +1,119 @@
+<?xml version="1.0"?>
+<!--
+  ClickHouse config.xml - Otimizado para DNS Telemetry
+  Host: Ubuntu 22.04 | 8 vCPU | 13GB RAM | NVMe
+  Versao: ClickHouse 24.6
+-->
+<clickhouse>
+
+    <!-- ========================
+         LOGGER
+    ======================== -->
+    <logger>
+        <level>warning</level>
+        <log>/var/log/clickhouse-server/clickhouse-server.log</log>
+        <errorlog>/var/log/clickhouse-server/clickhouse-server.err.log</errorlog>
+        <size>500M</size>
+        <count>5</count>
+        <compress>true</compress>
+    </logger>
+
+    <!-- ========================
+         NETWORK
+    ======================== -->
+    <http_port>8123</http_port>
+    <tcp_port>9000</tcp_port>
+    <listen_host>0.0.0.0</listen_host>
+    <max_connections>1024</max_connections>
+    <keep_alive_timeout>10</keep_alive_timeout>
+
+    <!-- ========================
+         STORAGE
+    ======================== -->
+    <path>/var/lib/clickhouse/</path>
+    <tmp_path>/var/lib/clickhouse/tmp/</tmp_path>
+    <user_files_path>/var/lib/clickhouse/user_files/</user_files_path>
+    <format_schema_path>/var/lib/clickhouse/format_schemas/</format_schema_path>
+
+    <!-- ========================
+         MEMORIA
+         Host 13GB - ClickHouse usa ate 8GB
+    ======================== -->
+    <max_server_memory_usage>8589934592</max_server_memory_usage>
+    <max_server_memory_usage_to_ram_ratio>0.6</max_server_memory_usage_to_ram_ratio>
+    <mark_cache_size>1073741824</mark_cache_size>
+    <uncompressed_cache_size>2147483648</uncompressed_cache_size>
+
+    <!-- ========================
+         QUERIES CONCORRENTES
+    ======================== -->
+    <max_concurrent_queries>100</max_concurrent_queries>
+    <max_concurrent_insert_queries>50</max_concurrent_insert_queries>
+
+    <!-- ========================
+         MERGETREE
+    ======================== -->
+    <merge_tree>
+        <parts_to_delay_insert>150</parts_to_delay_insert>
+        <parts_to_throw_insert>300</parts_to_throw_insert>
+        <min_bytes_for_wide_part>10485760</min_bytes_for_wide_part>
+        <min_rows_for_wide_part>10000</min_rows_for_wide_part>
+        <merge_with_ttl_timeout>3600</merge_with_ttl_timeout>
+    </merge_tree>
+
+    <!-- ========================
+         COMPRESSAO PADRAO
+    ======================== -->
+    <compression>
+        <case>
+            <min_part_size>10000000</min_part_size>
+            <min_part_size_ratio>0.01</min_part_size_ratio>
+            <method>lz4</method>
+        </case>
+    </compression>
+
+    <!-- ========================
+         TIMEZONE
+    ======================== -->
+    <timezone>America/Sao_Paulo</timezone>
+
+    <!-- ========================
+         USUARIOS E PERFIS
+         Aponta para o users.xml padrao do ClickHouse
+    ======================== -->
+    <users_config>users.xml</users_config>
+
+    <!-- ========================
+         QUERY LOG
+    ======================== -->
+    <query_log>
+        <database>system</database>
+        <table>query_log</table>
+        <flush_interval_milliseconds>7500</flush_interval_milliseconds>
+        <ttl>event_date + INTERVAL 7 DAY DELETE</ttl>
+    </query_log>
+
+    <!-- Desativa logs desnecessarios -->
+    <query_thread_log remove="1"/>
+    <query_views_log remove="1"/>
+    <part_log remove="1"/>
+    <text_log remove="1"/>
+    <trace_log remove="1"/>
+
+    <metric_log>
+        <database>system</database>
+        <table>metric_log</table>
+        <flush_interval_milliseconds>15000</flush_interval_milliseconds>
+        <collect_interval_milliseconds>5000</collect_interval_milliseconds>
+        <ttl>event_date + INTERVAL 3 DAY DELETE</ttl>
+    </metric_log>
+
+    <!-- ========================
+         MACROS (para replicacao futura)
+    ======================== -->
+    <macros>
+        <replica>dns-cgr01</replica>
+        <shard>01</shard>
+    </macros>
+
+</clickhouse>

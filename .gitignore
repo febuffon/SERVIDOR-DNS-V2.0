@@ -1,5 +1,28 @@
-# Ignora tudo na raiz exceto a pasta do projeto DNS
+# Ignora tudo
 *
-!servidor-dns-v2.0/
-!servidor-dns-v2.0/**
+
+# Exceto os arquivos do projeto DNS
 !.gitignore
+!README.md
+!.env.example
+!clickhouse/
+!clickhouse/**
+!dnstap-collector/
+!dnstap-collector/**
+!grafana/
+!grafana/**
+!clickhouse-ui/
+!clickhouse-ui/**
+!unbound/
+!unbound/**
+
+# Ignora .env com senhas reais
+.env
+*/.env
+
+# Ignora dados gerados em runtime
+clickhouse/data/
+clickhouse/logs/
+grafana/data/
+**/*.sock
+**/*.log

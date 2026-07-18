@@ -1,6 +1,5 @@
-# Ignora tudo na raiz
+# Ignora tudo na raiz exceto a pasta do projeto DNS
 *
 !servidor-dns-v2.0/
 !servidor-dns-v2.0/**
 !.gitignore
-!README.md

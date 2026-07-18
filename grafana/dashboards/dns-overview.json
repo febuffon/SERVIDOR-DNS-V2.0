@@ -115,7 +115,7 @@
       "targets": [
         {
           "datasource": { "uid": "clickhouse-dns", "type": "grafana-clickhouse-datasource" },
-          "rawSql": "SELECT round(avg(latency_us), 0) AS Latencia FROM dns_telemetry.dns_queries WHERE ts >= $__fromTime AND ts <= $__toTime AND latency_us > 0 AND message_type = 'CLIENT_RESPONSE'",
+          "rawSql": "SELECT round(avg(dateDiff('microsecond', q.ts, r.ts)), 0) AS Latencia FROM dns_telemetry.dns_queries r JOIN dns_telemetry.dns_queries q ON r.client_ip = q.client_ip AND r.qname = q.qname AND r.qtype = q.qtype WHERE r.message_type = 'CLIENT_RESPONSE' AND q.message_type = 'CLIENT_QUERY' AND r.ts >= $__fromTime AND r.ts <= $__toTime AND q.ts >= $__fromTime AND q.ts <= $__toTime AND dateDiff('microsecond', q.ts, r.ts) BETWEEN 1 AND 5000000",
           "format": 1,
           "refId": "A"
         }
@@ -366,7 +366,7 @@
       "targets": [
         {
           "datasource": { "uid": "clickhouse-dns", "type": "grafana-clickhouse-datasource" },
-          "rawSql": "SELECT toStartOfMinute(ts) AS time, avg(latency_us) AS Media, max(latency_us) AS Maximo FROM dns_telemetry.dns_queries WHERE ts >= $__fromTime AND ts <= $__toTime AND latency_us > 0 AND message_type = 'CLIENT_RESPONSE' GROUP BY time ORDER BY time",
+          "rawSql": "SELECT toStartOfMinute(r.ts) AS time, round(avg(dateDiff('microsecond', q.ts, r.ts)), 0) AS Media, max(dateDiff('microsecond', q.ts, r.ts)) AS Maximo FROM dns_telemetry.dns_queries r JOIN dns_telemetry.dns_queries q ON r.client_ip = q.client_ip AND r.qname = q.qname AND r.qtype = q.qtype WHERE r.message_type = 'CLIENT_RESPONSE' AND q.message_type = 'CLIENT_QUERY' AND r.ts >= $__fromTime AND r.ts <= $__toTime AND q.ts >= $__fromTime AND q.ts <= $__toTime AND dateDiff('microsecond', q.ts, r.ts) BETWEEN 1 AND 5000000 GROUP BY time ORDER BY time",
           "format": 0,
           "refId": "A"
         }

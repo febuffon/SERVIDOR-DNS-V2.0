@@ -195,7 +195,7 @@
       "targets": [
         {
           "datasource": { "uid": "clickhouse-dns", "type": "grafana-clickhouse-datasource" },
-          "rawSql": "SELECT qname AS Dominio, count() AS Total, countIf(rcode='NXDOMAIN') AS NXDOMAIN, countIf(rcode='NOERROR') AS OK FROM dns_telemetry.dns_queries WHERE ts >= $__fromTime AND ts <= $__toTime AND message_type = 'CLIENT_RESPONSE' GROUP BY Dominio ORDER BY Total DESC LIMIT 15",
+          "rawSql": "SELECT qname AS Dominio, count() AS Total, countIf(rcode='NXDOMAIN') AS NXDOMAIN, countIf(rcode='NOERROR') AS OK FROM dns_telemetry.dns_queries WHERE ts >= $__fromTime AND ts <= $__toTime AND message_type = 'CLIENT_RESPONSE' AND client_ip NOT IN ('127.0.0.1', '::1') GROUP BY Dominio ORDER BY Total DESC LIMIT 15",
           "format": 1,
           "refId": "A"
         }
@@ -232,7 +232,7 @@
       "targets": [
         {
           "datasource": { "uid": "clickhouse-dns", "type": "grafana-clickhouse-datasource" },
-          "rawSql": "SELECT client_ip AS Cliente, count() AS Total, countIf(rcode='NXDOMAIN') AS NXDOMAIN, round(countIf(rcode='NXDOMAIN')/count()*100,1) AS Pct_NXDOMAIN FROM dns_telemetry.dns_queries WHERE ts >= $__fromTime AND ts <= $__toTime AND message_type = 'CLIENT_RESPONSE' GROUP BY Cliente ORDER BY Total DESC LIMIT 15",
+          "rawSql": "SELECT client_ip AS Cliente, count() AS Total, countIf(rcode='NXDOMAIN') AS NXDOMAIN, round(countIf(rcode='NXDOMAIN')/count()*100,1) AS Pct_NXDOMAIN FROM dns_telemetry.dns_queries WHERE ts >= $__fromTime AND ts <= $__toTime AND message_type = 'CLIENT_RESPONSE' AND client_ip NOT IN ('127.0.0.1', '::1') GROUP BY Cliente ORDER BY Total DESC LIMIT 15",
           "format": 1,
           "refId": "A"
         }
@@ -300,7 +300,7 @@
       "targets": [
         {
           "datasource": { "uid": "clickhouse-dns", "type": "grafana-clickhouse-datasource" },
-          "rawSql": "SELECT client_ip AS IP, countIf(rcode='NXDOMAIN') AS NXDOMAIN, count() AS Total, round(countIf(rcode='NXDOMAIN')/count()*100,1) AS Pct FROM dns_telemetry.dns_queries WHERE ts >= $__fromTime AND ts <= $__toTime GROUP BY IP HAVING NXDOMAIN > 0 ORDER BY NXDOMAIN DESC LIMIT 20",
+          "rawSql": "SELECT client_ip AS IP, countIf(rcode='NXDOMAIN') AS NXDOMAIN, count() AS Total, round(countIf(rcode='NXDOMAIN')/count()*100,1) AS Pct FROM dns_telemetry.dns_queries WHERE ts >= $__fromTime AND ts <= $__toTime AND client_ip NOT IN ('127.0.0.1', '::1') GROUP BY IP HAVING NXDOMAIN > 0 ORDER BY NXDOMAIN DESC LIMIT 20",
           "format": 1,
           "refId": "A"
         }

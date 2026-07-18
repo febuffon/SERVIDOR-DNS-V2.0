@@ -241,15 +241,38 @@
     {
       "id": 11,
       "title": "Resultado das Consultas",
-      "type": "piechart",
+      "type": "table",
       "gridPos": { "x": 0, "y": 22, "w": 8, "h": 8 },
       "datasource": { "uid": "clickhouse-dns", "type": "grafana-clickhouse-datasource" },
-      "fieldConfig": { "defaults": { "unit": "short", "color": { "mode": "palette-classic" } } },
-      "options": { "pieType": "donut", "legend": { "displayMode": "table", "placement": "right", "values": ["percent"] } },
+      "fieldConfig": {
+        "defaults": { "unit": "short" },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "Total" },
+            "properties": [
+              { "id": "custom.displayMode", "value": "gradient-gauge" },
+              { "id": "color", "value": { "mode": "continuous-BlPu" } },
+              { "id": "min", "value": 0 }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "RCODE" },
+            "properties": [
+              { "id": "custom.displayMode", "value": "color-background" },
+              { "id": "mappings", "value": [
+                { "type": "value", "options": { "NOERROR": { "color": "green", "index": 0 } } },
+                { "type": "value", "options": { "NXDOMAIN": { "color": "red", "index": 1 } } },
+                { "type": "value", "options": { "SERVFAIL": { "color": "orange", "index": 2 } } }
+              ]}
+            ]
+          }
+        ]
+      },
+      "options": { "sortBy": [{ "desc": true, "displayName": "Total" }] },
       "targets": [
         {
           "datasource": { "uid": "clickhouse-dns", "type": "grafana-clickhouse-datasource" },
-          "rawSql": "SELECT rcode AS RCODE, count() AS Total FROM dns_telemetry.dns_queries WHERE ts >= $__fromTime AND ts <= $__toTime AND message_type = 'CLIENT_RESPONSE' AND rcode != '-' GROUP BY RCODE ORDER BY Total DESC",
+          "rawSql": "SELECT rcode AS RCODE, count() AS Total, round(count()/sum(count()) OVER ()*100, 1) AS Percentual FROM dns_telemetry.dns_queries WHERE ts >= $__fromTime AND ts <= $__toTime AND message_type = 'CLIENT_RESPONSE' AND rcode != '-' GROUP BY RCODE ORDER BY Total DESC",
           "format": 1,
           "refId": "A"
         }
@@ -258,15 +281,27 @@
     {
       "id": 12,
       "title": "Tipo de Busca DNS",
-      "type": "piechart",
+      "type": "table",
       "gridPos": { "x": 8, "y": 22, "w": 8, "h": 8 },
       "datasource": { "uid": "clickhouse-dns", "type": "grafana-clickhouse-datasource" },
-      "fieldConfig": { "defaults": { "unit": "short", "color": { "mode": "palette-classic" } } },
-      "options": { "pieType": "donut", "legend": { "displayMode": "table", "placement": "right", "values": ["percent"] } },
+      "fieldConfig": {
+        "defaults": { "unit": "short" },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "Total" },
+            "properties": [
+              { "id": "custom.displayMode", "value": "gradient-gauge" },
+              { "id": "color", "value": { "mode": "continuous-GrYlRd" } },
+              { "id": "min", "value": 0 }
+            ]
+          }
+        ]
+      },
+      "options": { "sortBy": [{ "desc": true, "displayName": "Total" }] },
       "targets": [
         {
           "datasource": { "uid": "clickhouse-dns", "type": "grafana-clickhouse-datasource" },
-          "rawSql": "SELECT qtype AS Tipo, count() AS Total FROM dns_telemetry.dns_queries WHERE ts >= $__fromTime AND ts <= $__toTime GROUP BY Tipo ORDER BY Total DESC LIMIT 10",
+          "rawSql": "SELECT qtype AS Tipo, count() AS Total, round(count()/sum(count()) OVER ()*100, 1) AS Percentual FROM dns_telemetry.dns_queries WHERE ts >= $__fromTime AND ts <= $__toTime GROUP BY Tipo ORDER BY Total DESC LIMIT 10",
           "format": 1,
           "refId": "A"
         }
@@ -275,15 +310,27 @@
     {
       "id": 13,
       "title": "Extensões Mais Acessadas (.com, .br...)",
-      "type": "piechart",
+      "type": "table",
       "gridPos": { "x": 16, "y": 22, "w": 8, "h": 8 },
       "datasource": { "uid": "clickhouse-dns", "type": "grafana-clickhouse-datasource" },
-      "fieldConfig": { "defaults": { "unit": "short", "color": { "mode": "palette-classic" } } },
-      "options": { "pieType": "donut", "legend": { "displayMode": "table", "placement": "right", "values": ["percent"] } },
+      "fieldConfig": {
+        "defaults": { "unit": "short" },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "Total" },
+            "properties": [
+              { "id": "custom.displayMode", "value": "gradient-gauge" },
+              { "id": "color", "value": { "mode": "continuous-BlPu" } },
+              { "id": "min", "value": 0 }
+            ]
+          }
+        ]
+      },
+      "options": { "sortBy": [{ "desc": true, "displayName": "Total" }] },
       "targets": [
         {
           "datasource": { "uid": "clickhouse-dns", "type": "grafana-clickhouse-datasource" },
-          "rawSql": "SELECT lower(arrayElement(splitByChar('.', qname), -1)) AS TLD, count() AS Total FROM dns_telemetry.dns_queries WHERE ts >= $__fromTime AND ts <= $__toTime AND length(qname) > 0 GROUP BY TLD ORDER BY Total DESC LIMIT 10",
+          "rawSql": "SELECT lower(arrayElement(splitByChar('.', qname), -1)) AS Extensao, count() AS Total, round(count()/sum(count()) OVER ()*100, 1) AS Percentual FROM dns_telemetry.dns_queries WHERE ts >= $__fromTime AND ts <= $__toTime AND length(qname) > 0 GROUP BY Extensao ORDER BY Total DESC LIMIT 10",
           "format": 1,
           "refId": "A"
         }

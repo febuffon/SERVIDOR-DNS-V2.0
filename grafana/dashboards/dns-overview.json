@@ -1,6 +1,6 @@
 {
   "uid": "dns-overview",
-  "title": "DNS Overview",
+  "title": "Monitoramento de Rede DNS",
   "tags": ["dns", "unbound", "clickhouse"],
   "timezone": "browser",
   "schemaVersion": 38,
@@ -26,7 +26,7 @@
   "panels": [
     {
       "id": 1,
-      "title": "Queries por Minuto",
+      "title": "Consultas DNS por Minuto",
       "type": "timeseries",
       "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 },
       "datasource": { "uid": "clickhouse-dns", "type": "grafana-clickhouse-datasource" },
@@ -49,7 +49,7 @@
     },
     {
       "id": 2,
-      "title": "NXDOMAIN por Minuto",
+      "title": "Endereços Não Encontrados por Minuto",
       "type": "timeseries",
       "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 },
       "datasource": { "uid": "clickhouse-dns", "type": "grafana-clickhouse-datasource" },
@@ -72,7 +72,7 @@
     },
     {
       "id": 3,
-      "title": "Total Queries",
+      "title": "Total de Consultas",
       "type": "stat",
       "gridPos": { "x": 0, "y": 8, "w": 4, "h": 4 },
       "datasource": { "uid": "clickhouse-dns", "type": "grafana-clickhouse-datasource" },
@@ -89,7 +89,7 @@
     },
     {
       "id": 4,
-      "title": "NXDOMAIN",
+      "title": "Sites Não Encontrados",
       "type": "stat",
       "gridPos": { "x": 4, "y": 8, "w": 4, "h": 4 },
       "datasource": { "uid": "clickhouse-dns", "type": "grafana-clickhouse-datasource" },
@@ -106,7 +106,7 @@
     },
     {
       "id": 5,
-      "title": "Latência Média",
+      "title": "Velocidade de Resposta (µs)",
       "type": "stat",
       "gridPos": { "x": 8, "y": 8, "w": 4, "h": 4 },
       "datasource": { "uid": "clickhouse-dns", "type": "grafana-clickhouse-datasource" },
@@ -123,7 +123,7 @@
     },
     {
       "id": 6,
-      "title": "Clientes Únicos",
+      "title": "Dispositivos na Rede",
       "type": "stat",
       "gridPos": { "x": 12, "y": 8, "w": 4, "h": 4 },
       "datasource": { "uid": "clickhouse-dns", "type": "grafana-clickhouse-datasource" },
@@ -140,7 +140,7 @@
     },
     {
       "id": 7,
-      "title": "SERVFAIL",
+      "title": "Erros do Servidor",
       "type": "stat",
       "gridPos": { "x": 16, "y": 8, "w": 4, "h": 4 },
       "datasource": { "uid": "clickhouse-dns", "type": "grafana-clickhouse-datasource" },
@@ -157,7 +157,7 @@
     },
     {
       "id": 8,
-      "title": "Domínios Únicos",
+      "title": "Sites Diferentes Acessados",
       "type": "stat",
       "gridPos": { "x": 20, "y": 8, "w": 4, "h": 4 },
       "datasource": { "uid": "clickhouse-dns", "type": "grafana-clickhouse-datasource" },
@@ -174,7 +174,7 @@
     },
     {
       "id": 9,
-      "title": "Top 15 Domínios",
+      "title": "Sites Mais Acessados",
       "type": "table",
       "gridPos": { "x": 0, "y": 12, "w": 12, "h": 10 },
       "datasource": { "uid": "clickhouse-dns", "type": "grafana-clickhouse-datasource" },
@@ -203,7 +203,7 @@
     },
     {
       "id": 10,
-      "title": "Top 15 Clientes",
+      "title": "Dispositivos que Mais Navegaram",
       "type": "table",
       "gridPos": { "x": 12, "y": 12, "w": 12, "h": 10 },
       "datasource": { "uid": "clickhouse-dns", "type": "grafana-clickhouse-datasource" },
@@ -240,7 +240,7 @@
     },
     {
       "id": 11,
-      "title": "Distribuição RCODE",
+      "title": "Resultado das Consultas",
       "type": "piechart",
       "gridPos": { "x": 0, "y": 22, "w": 8, "h": 8 },
       "datasource": { "uid": "clickhouse-dns", "type": "grafana-clickhouse-datasource" },
@@ -257,7 +257,7 @@
     },
     {
       "id": 12,
-      "title": "Tipos de Query",
+      "title": "Tipo de Busca DNS",
       "type": "piechart",
       "gridPos": { "x": 8, "y": 22, "w": 8, "h": 8 },
       "datasource": { "uid": "clickhouse-dns", "type": "grafana-clickhouse-datasource" },
@@ -274,7 +274,7 @@
     },
     {
       "id": 13,
-      "title": "Top TLDs",
+      "title": "Extensões Mais Acessadas (.com, .br...)",
       "type": "piechart",
       "gridPos": { "x": 16, "y": 22, "w": 8, "h": 8 },
       "datasource": { "uid": "clickhouse-dns", "type": "grafana-clickhouse-datasource" },
@@ -291,7 +291,7 @@
     },
     {
       "id": 14,
-      "title": "NXDOMAINs por Cliente",
+      "title": "Dispositivos com Mais Erros (possível vírus)",
       "type": "table",
       "gridPos": { "x": 0, "y": 30, "w": 12, "h": 8 },
       "datasource": { "uid": "clickhouse-dns", "type": "grafana-clickhouse-datasource" },
@@ -308,7 +308,7 @@
     },
     {
       "id": 15,
-      "title": "Latência por Minuto (µs)",
+      "title": "Tempo de Resposta ao Longo do Tempo",
       "type": "timeseries",
       "gridPos": { "x": 12, "y": 30, "w": 12, "h": 8 },
       "datasource": { "uid": "clickhouse-dns", "type": "grafana-clickhouse-datasource" },

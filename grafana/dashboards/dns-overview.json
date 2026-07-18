@@ -34,7 +34,7 @@
         "defaults": {
           "color": { "mode": "palette-classic" },
           "custom": { "lineWidth": 2, "fillOpacity": 10 },
-          "unit": "short"
+          "unit": "none"
         }
       },
       "options": { "tooltip": { "mode": "multi" }, "legend": { "displayMode": "list", "placement": "bottom" } },
@@ -57,7 +57,7 @@
         "defaults": {
           "color": { "fixedColor": "red", "mode": "fixed" },
           "custom": { "lineWidth": 2, "fillOpacity": 10 },
-          "unit": "short"
+          "unit": "none"
         }
       },
       "options": { "tooltip": { "mode": "multi" }, "legend": { "displayMode": "list", "placement": "bottom" } },
@@ -76,7 +76,7 @@
       "type": "stat",
       "gridPos": { "x": 0, "y": 8, "w": 4, "h": 4 },
       "datasource": { "uid": "clickhouse-dns", "type": "grafana-clickhouse-datasource" },
-      "fieldConfig": { "defaults": { "unit": "short", "color": { "mode": "thresholds" }, "thresholds": { "steps": [{ "color": "green", "value": null }] } } },
+      "fieldConfig": { "defaults": { "unit": "none", "color": { "mode": "thresholds" }, "thresholds": { "steps": [{ "color": "green", "value": null }] } } },
       "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background" },
       "targets": [
         {
@@ -93,7 +93,7 @@
       "type": "stat",
       "gridPos": { "x": 4, "y": 8, "w": 4, "h": 4 },
       "datasource": { "uid": "clickhouse-dns", "type": "grafana-clickhouse-datasource" },
-      "fieldConfig": { "defaults": { "unit": "short", "color": { "mode": "thresholds" }, "thresholds": { "steps": [{ "color": "green", "value": null }, { "color": "orange", "value": 50 }, { "color": "red", "value": 500 }] } } },
+      "fieldConfig": { "defaults": { "unit": "none", "color": { "mode": "thresholds" }, "thresholds": { "steps": [{ "color": "green", "value": null }, { "color": "orange", "value": 50 }, { "color": "red", "value": 500 }] } } },
       "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background" },
       "targets": [
         {
@@ -127,7 +127,7 @@
       "type": "stat",
       "gridPos": { "x": 12, "y": 8, "w": 4, "h": 4 },
       "datasource": { "uid": "clickhouse-dns", "type": "grafana-clickhouse-datasource" },
-      "fieldConfig": { "defaults": { "unit": "short", "color": { "mode": "thresholds" }, "thresholds": { "steps": [{ "color": "blue", "value": null }] } } },
+      "fieldConfig": { "defaults": { "unit": "none", "color": { "mode": "thresholds" }, "thresholds": { "steps": [{ "color": "blue", "value": null }] } } },
       "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background" },
       "targets": [
         {
@@ -144,7 +144,7 @@
       "type": "stat",
       "gridPos": { "x": 16, "y": 8, "w": 4, "h": 4 },
       "datasource": { "uid": "clickhouse-dns", "type": "grafana-clickhouse-datasource" },
-      "fieldConfig": { "defaults": { "unit": "short", "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "orange", "value": 50 }, { "color": "red", "value": 500 }] } } },
+      "fieldConfig": { "defaults": { "unit": "none", "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "orange", "value": 50 }, { "color": "red", "value": 500 }] } } },
       "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background" },
       "targets": [
         {
@@ -161,7 +161,7 @@
       "type": "stat",
       "gridPos": { "x": 20, "y": 8, "w": 4, "h": 4 },
       "datasource": { "uid": "clickhouse-dns", "type": "grafana-clickhouse-datasource" },
-      "fieldConfig": { "defaults": { "unit": "short", "color": { "mode": "thresholds" }, "thresholds": { "steps": [{ "color": "purple", "value": null }] } } },
+      "fieldConfig": { "defaults": { "unit": "none", "color": { "mode": "thresholds" }, "thresholds": { "steps": [{ "color": "purple", "value": null }] } } },
       "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background" },
       "targets": [
         {
@@ -179,7 +179,7 @@
       "gridPos": { "x": 0, "y": 12, "w": 12, "h": 10 },
       "datasource": { "uid": "clickhouse-dns", "type": "grafana-clickhouse-datasource" },
       "fieldConfig": {
-        "defaults": { "unit": "short" },
+        "defaults": { "unit": "none" },
         "overrides": [
           {
             "matcher": { "id": "byName", "options": "Total" },
@@ -208,7 +208,7 @@
       "gridPos": { "x": 12, "y": 12, "w": 12, "h": 10 },
       "datasource": { "uid": "clickhouse-dns", "type": "grafana-clickhouse-datasource" },
       "fieldConfig": {
-        "defaults": { "unit": "short" },
+        "defaults": { "unit": "none" },
         "overrides": [
           {
             "matcher": { "id": "byName", "options": "Total" },
@@ -245,7 +245,7 @@
       "gridPos": { "x": 0, "y": 22, "w": 8, "h": 8 },
       "datasource": { "uid": "clickhouse-dns", "type": "grafana-clickhouse-datasource" },
       "fieldConfig": {
-        "defaults": { "unit": "short" },
+        "defaults": { "unit": "none" },
         "overrides": [
           {
             "matcher": { "id": "byName", "options": "Total" },
@@ -285,7 +285,7 @@
       "gridPos": { "x": 8, "y": 22, "w": 8, "h": 8 },
       "datasource": { "uid": "clickhouse-dns", "type": "grafana-clickhouse-datasource" },
       "fieldConfig": {
-        "defaults": { "unit": "short" },
+        "defaults": { "unit": "none" },
         "overrides": [
           {
             "matcher": { "id": "byName", "options": "Total" },
@@ -314,7 +314,7 @@
       "gridPos": { "x": 16, "y": 22, "w": 8, "h": 8 },
       "datasource": { "uid": "clickhouse-dns", "type": "grafana-clickhouse-datasource" },
       "fieldConfig": {
-        "defaults": { "unit": "short" },
+        "defaults": { "unit": "none" },
         "overrides": [
           {
             "matcher": { "id": "byName", "options": "Total" },
@@ -342,7 +342,7 @@
       "type": "table",
       "gridPos": { "x": 0, "y": 30, "w": 12, "h": 8 },
       "datasource": { "uid": "clickhouse-dns", "type": "grafana-clickhouse-datasource" },
-      "fieldConfig": { "defaults": { "unit": "short" } },
+      "fieldConfig": { "defaults": { "unit": "none" } },
       "options": { "sortBy": [{ "desc": true, "displayName": "NXDOMAIN" }] },
       "targets": [
         {

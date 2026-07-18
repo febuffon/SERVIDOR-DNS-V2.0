@@ -110,12 +110,12 @@
       "type": "stat",
       "gridPos": { "x": 8, "y": 8, "w": 4, "h": 4 },
       "datasource": { "uid": "clickhouse-dns", "type": "grafana-clickhouse-datasource" },
-      "fieldConfig": { "defaults": { "unit": "µs", "color": { "mode": "thresholds" }, "thresholds": { "steps": [{ "color": "green", "value": null }, { "color": "orange", "value": 50000 }, { "color": "red", "value": 200000 }] } } },
+      "fieldConfig": { "defaults": { "unit": "ms", "decimals": 1, "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "orange", "value": 100 }, { "color": "red", "value": 500 }] } } },
       "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background" },
       "targets": [
         {
           "datasource": { "uid": "clickhouse-dns", "type": "grafana-clickhouse-datasource" },
-          "rawSql": "SELECT round(avg(latency_us), 0) AS Latencia FROM (SELECT r.ts AS ts, min(dateDiff('microsecond', q.ts, r.ts)) AS latency_us FROM dns_telemetry.dns_queries r JOIN dns_telemetry.dns_queries q ON r.client_ip = q.client_ip AND r.qname = q.qname AND r.qtype = q.qtype WHERE r.message_type = 'CLIENT_RESPONSE' AND q.message_type = 'CLIENT_QUERY' AND r.ts >= $__fromTime AND r.ts <= $__toTime AND q.ts >= $__fromTime AND q.ts <= $__toTime GROUP BY r.ts, r.qname, r.client_ip HAVING latency_us BETWEEN 1 AND 2000000)",
+          "rawSql": "SELECT round(avg(latency_us) / 1000, 1) AS Latencia FROM (SELECT r.ts AS ts, min(dateDiff('microsecond', q.ts, r.ts)) AS latency_us FROM dns_telemetry.dns_queries r JOIN dns_telemetry.dns_queries q ON r.client_ip = q.client_ip AND r.qname = q.qname AND r.qtype = q.qtype WHERE r.message_type = 'CLIENT_RESPONSE' AND q.message_type = 'CLIENT_QUERY' AND r.ts >= $__fromTime AND r.ts <= $__toTime AND q.ts >= $__fromTime AND q.ts <= $__toTime GROUP BY r.ts, r.qname, r.client_ip HAVING latency_us BETWEEN 1000 AND 2000000)",
           "format": 1,
           "refId": "A"
         }
@@ -360,13 +360,13 @@
       "gridPos": { "x": 12, "y": 30, "w": 12, "h": 8 },
       "datasource": { "uid": "clickhouse-dns", "type": "grafana-clickhouse-datasource" },
       "fieldConfig": {
-        "defaults": { "unit": "µs", "custom": { "lineWidth": 2, "fillOpacity": 5 }, "color": { "mode": "palette-classic" } }
+        "defaults": { "unit": "ms", "decimals": 1, "custom": { "lineWidth": 2, "fillOpacity": 5 }, "color": { "mode": "palette-classic" } }
       },
       "options": { "tooltip": { "mode": "multi" }, "legend": { "displayMode": "list", "placement": "bottom" } },
       "targets": [
         {
           "datasource": { "uid": "clickhouse-dns", "type": "grafana-clickhouse-datasource" },
-          "rawSql": "SELECT toStartOfMinute(ts) AS time, round(avg(latency_us), 0) AS Media, max(latency_us) AS Maximo FROM (SELECT r.ts AS ts, min(dateDiff('microsecond', q.ts, r.ts)) AS latency_us FROM dns_telemetry.dns_queries r JOIN dns_telemetry.dns_queries q ON r.client_ip = q.client_ip AND r.qname = q.qname AND r.qtype = q.qtype WHERE r.message_type = 'CLIENT_RESPONSE' AND q.message_type = 'CLIENT_QUERY' AND r.ts >= $__fromTime AND r.ts <= $__toTime AND q.ts >= $__fromTime AND q.ts <= $__toTime GROUP BY r.ts, r.qname, r.client_ip HAVING latency_us BETWEEN 1 AND 2000000) GROUP BY time ORDER BY time",
+          "rawSql": "SELECT toStartOfMinute(ts) AS time, round(avg(latency_us)/1000, 1) AS Media_ms, round(max(latency_us)/1000, 1) AS Maximo_ms FROM (SELECT r.ts AS ts, min(dateDiff('microsecond', q.ts, r.ts)) AS latency_us FROM dns_telemetry.dns_queries r JOIN dns_telemetry.dns_queries q ON r.client_ip = q.client_ip AND r.qname = q.qname AND r.qtype = q.qtype WHERE r.message_type = 'CLIENT_RESPONSE' AND q.message_type = 'CLIENT_QUERY' AND r.ts >= $__fromTime AND r.ts <= $__toTime AND q.ts >= $__fromTime AND q.ts <= $__toTime GROUP BY r.ts, r.qname, r.client_ip HAVING latency_us BETWEEN 1000 AND 2000000) GROUP BY time ORDER BY time",
           "format": 0,
           "refId": "A"
         }

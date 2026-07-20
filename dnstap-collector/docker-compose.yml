@@ -28,7 +28,7 @@ services:
 
     volumes:
       # Socket compartilhado com o Unbound
-      - /home/luiz-fernando/servidor-dns-1/dnstap:/var/dnstap
+      - ../dnstap:/var/dnstap
 
     logging:
       driver: "json-file"

@@ -35,12 +35,22 @@ type DNSRow struct {
 	AdFlag       uint8
 }
 
+// pendingQuery guarda o instante da query aguardando a resposta correspondente
+type pendingQuery struct {
+	ts time.Time
+}
+
 // Inserter gerencia o batch insert no ClickHouse
 type Inserter struct {
 	conn          clickhouse.Conn
 	serverID      string
 	batchSize     int
 	flushInterval time.Duration
+
+	// Correlaciona CLIENT_QUERY -> CLIENT_RESPONSE para calcular latencia real,
+	// já que o Unbound emite frames separados: query_time só vem no frame de
+	// query e response_time só vem no frame de resposta.
+	pending map[string]pendingQuery
 }
 
 func NewInserter(dsn, serverID string, batchSize int, flushInterval time.Duration) (*Inserter, error) {
@@ -79,6 +89,7 @@ func NewInserter(dsn, serverID string, batchSize int, flushInterval time.Duratio
 		serverID:      serverID,
 		batchSize:     batchSize,
 		flushInterval: flushInterval,
+		pending:       make(map[string]pendingQuery),
 	}, nil
 }
 
@@ -101,10 +112,24 @@ func (ins *Inserter) Run(ctx context.Context, msgCh <-chan []byte) {
 			return
 
 		case frame := <-msgCh:
-			row, err := parseFrame(frame, ins.serverID)
+			row, corrKey, isQuery, err := parseFrame(frame, ins.serverID)
 			if err != nil {
 				continue
 			}
+
+			if isQuery {
+				if corrKey != "" {
+					ins.pending[corrKey] = pendingQuery{ts: row.Ts}
+				}
+			} else if corrKey != "" {
+				if pq, ok := ins.pending[corrKey]; ok {
+					if diff := row.Ts.Sub(pq.ts); diff > 0 {
+						row.LatencyUs = uint32(diff.Microseconds())
+					}
+					delete(ins.pending, corrKey)
+				}
+			}
+
 			batch = append(batch, row)
 			if len(batch) >= ins.batchSize {
 				ins.flush(batch)
@@ -116,6 +141,17 @@ func (ins *Inserter) Run(ctx context.Context, msgCh <-chan []byte) {
 				ins.flush(batch)
 				batch = batch[:0]
 			}
+			ins.cleanupPending()
+		}
+	}
+}
+
+// cleanupPending remove entradas orfas (query sem resposta) mais antigas que 10s
+func (ins *Inserter) cleanupPending() {
+	cutoff := time.Now().Add(-10 * time.Second)
+	for k, pq := range ins.pending {
+		if pq.ts.Before(cutoff) {
+			delete(ins.pending, k)
 		}
 	}
 }
@@ -153,16 +189,18 @@ func (ins *Inserter) flush(rows []DNSRow) {
 	log.Printf("[inserter] flush OK | %d rows", len(rows))
 }
 
-// parseFrame converte um frame dnstap protobuf em DNSRow
-func parseFrame(frame []byte, serverID string) (DNSRow, error) {
+// parseFrame converte um frame dnstap protobuf em DNSRow.
+// Retorna também a chave de correlação query<->response (client_ip:port:dns_id)
+// e se o frame é uma query (true) ou resposta (false).
+func parseFrame(frame []byte, serverID string) (DNSRow, string, bool, error) {
 	msg := &dnstap.Dnstap{}
 	if err := proto.Unmarshal(frame, msg); err != nil {
-		return DNSRow{}, fmt.Errorf("unmarshal: %w", err)
+		return DNSRow{}, "", false, fmt.Errorf("unmarshal: %w", err)
 	}
 
 	m := msg.GetMessage()
 	if m == nil {
-		return DNSRow{}, fmt.Errorf("mensagem dnstap vazia")
+		return DNSRow{}, "", false, fmt.Errorf("mensagem dnstap vazia")
 	}
 
 	row := DNSRow{
@@ -224,9 +262,15 @@ func parseFrame(frame []byte, serverID string) (DNSRow, error) {
 		isResponse = false
 	}
 
+	var dnsID uint16
+	var haveDNSID bool
+
 	if len(wireMsg) > 0 {
 		dnsMsg := new(dns.Msg)
 		if err := dnsMsg.Unpack(wireMsg); err == nil {
+			dnsID = dnsMsg.Id
+			haveDNSID = true
+
 			// Extrai qname, qtype, qclass da secao Question
 			if len(dnsMsg.Question) > 0 {
 				q := dnsMsg.Question[0]
@@ -283,22 +327,18 @@ func parseFrame(frame []byte, serverID string) (DNSRow, error) {
 		row.Rcode = "NOERROR"
 	}
 
-	// Latencia: diferenca entre query e response time (microsegundos)
-	qSec := m.GetQueryTimeSec()
-	qNsec := m.GetQueryTimeNsec()
-	rSec := m.GetResponseTimeSec()
-	rNsec := m.GetResponseTimeNsec()
-	if qSec > 0 && rSec > 0 && rSec >= qSec {
-		diffNs := int64(rSec-qSec)*1e9 + int64(rNsec) - int64(qNsec)
-		if diffNs > 0 {
-			row.LatencyUs = uint32(diffNs / 1000)
-		}
-	}
-
 	// Normaliza qname: remove trailing dot para consistencia
 	row.Qname = strings.TrimSuffix(row.Qname, ".")
 
-	return row, nil
+	// Chave de correlacao query<->response: o Unbound emite frames separados
+	// (CLIENT_QUERY so tem query_time, CLIENT_RESPONSE so tem response_time),
+	// entao a latencia real e calculada no inserter usando client_ip:port:dns_id.
+	var corrKey string
+	if haveDNSID && row.ClientIP != "" {
+		corrKey = fmt.Sprintf("%s:%d:%d", row.ClientIP, row.ClientPort, dnsID)
+	}
+
+	return row, corrKey, !isResponse, nil
 }
 
 // ipBytesToString converte bytes de IP (4 ou 16) para string

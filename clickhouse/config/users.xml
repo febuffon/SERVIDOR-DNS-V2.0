@@ -1,0 +1,96 @@
+<?xml version="1.0"?>
+<!--
+  ClickHouse users.xml
+  - admin: acesso total (Grafana, manutencao)
+  - dns_writer: apenas INSERT (coletor dnstap)
+  - grafana: apenas SELECT (dashboards)
+-->
+<clickhouse>
+
+    <!-- Perfis de query -->
+    <profiles>
+        <default>
+            <max_memory_usage>2147483648</max_memory_usage>
+            <use_uncompressed_cache>1</use_uncompressed_cache>
+            <load_balancing>random</load_balancing>
+            <max_execution_time>60</max_execution_time>
+            <max_read_buffer_size>1048576</max_read_buffer_size>
+        </default>
+
+        <readonly>
+            <readonly>1</readonly>
+            <max_memory_usage>1073741824</max_memory_usage>
+            <max_execution_time>30</max_execution_time>
+            <max_read_buffer_size>1048576</max_read_buffer_size>
+        </readonly>
+
+        <writer>
+            <readonly>0</readonly>
+            <max_memory_usage>536870912</max_memory_usage>
+            <max_execution_time>10</max_execution_time>
+            <async_insert>1</async_insert>
+            <async_insert_max_data_size>10485760</async_insert_max_data_size>
+            <async_insert_busy_timeout_ms>1000</async_insert_busy_timeout_ms>
+            <async_insert_stale_timeout_ms>5000</async_insert_stale_timeout_ms>
+            <max_read_buffer_size>1048576</max_read_buffer_size>
+        </writer>
+    </profiles>
+
+    <!-- Quotas -->
+    <quotas>
+        <default>
+            <interval>
+                <duration>3600</duration>
+                <queries>0</queries>
+                <errors>0</errors>
+                <result_rows>0</result_rows>
+                <read_rows>0</read_rows>
+                <execution_time>0</execution_time>
+            </interval>
+        </default>
+    </quotas>
+
+    <!-- Usuarios -->
+    <users>
+        <!-- Admin: acesso total -->
+        <admin>
+            <password>${CLICKHOUSE_PASSWORD}</password>
+            <networks>
+                <ip>::/0</ip>
+            </networks>
+            <profile>default</profile>
+            <quota>default</quota>
+            <access_management>1</access_management>
+            <named_collection_control>1</named_collection_control>
+        </admin>
+
+        <!-- dns_writer: INSERT na base dns_telemetry -->
+        <dns_writer>
+            <password>dns_writer_pass</password>
+            <networks>
+                <ip>127.0.0.1</ip>
+                <ip>::1</ip>
+                <ip>10.0.0.0/8</ip>
+                <ip>172.16.0.0/12</ip>
+                <ip>192.168.0.0/16</ip>
+            </networks>
+            <profile>writer</profile>
+            <quota>default</quota>
+        </dns_writer>
+
+        <!-- grafana: apenas SELECT -->
+        <grafana>
+            <password>grafana_pass</password>
+            <networks>
+                <ip>127.0.0.1</ip>
+                <ip>::1</ip>
+                <ip>10.0.0.0/8</ip>
+                <ip>172.16.0.0/12</ip>
+                <ip>192.168.0.0/16</ip>
+            </networks>
+            <profile>readonly</profile>
+            <quota>default</quota>
+        </grafana>
+    </users>
+
+</clickhouse>

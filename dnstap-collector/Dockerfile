@@ -20,12 +20,10 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
     go build -ldflags="-w -s" -o dnstap-collector .
 
 # ============================================================
-# Stage 2: Runtime minimo
-FROM scratch
+# Stage 2: Runtime minimo (alpine para suportar healthcheck via shell)
+FROM alpine:3.20
 
-# Certificados e timezone do builder
-COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
-COPY --from=builder /usr/share/zoneinfo /usr/share/zoneinfo
+RUN apk add --no-cache ca-certificates tzdata
 
 # Binario
 COPY --from=builder /build/dnstap-collector /dnstap-collector

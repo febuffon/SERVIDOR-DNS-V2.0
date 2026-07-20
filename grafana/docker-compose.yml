@@ -14,6 +14,10 @@ services:
       GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
       GF_INSTALL_PLUGINS: grafana-clickhouse-datasource
       TZ: America/Sao_Paulo
+      GF_DATAPROXY_TIMEOUT: 28
+      GF_DATAPROXY_DIAL_TIMEOUT: 10
+      GF_DATAPROXY_MAX_IDLE_CONNECTIONS_PER_HOST: 2
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-admin}
 
     volumes:
       - grafana-data:/var/lib/grafana
@@ -25,6 +29,15 @@ services:
       options:
         max-size: "50m"
         max-file: "3"
+
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 512M
+        reservations:
+          cpus: "0.5"
+          memory: 128M
 
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/api/health"]

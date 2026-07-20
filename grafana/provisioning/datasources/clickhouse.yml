@@ -15,6 +15,6 @@ datasources:
       defaultDatabase: dns_telemetry
       defaultTable: dns_queries
       dialTimeout: 10
-      queryTimeout: 60
+      queryTimeout: 25
     secureJsonData:
       password: ${CLICKHOUSE_PASSWORD}

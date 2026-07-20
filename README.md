@@ -16,11 +16,10 @@ bem distintos, separados fisicamente para não misturar o que é versionado
 ```
 IA.CONFIG/
 ├── unbound/                   ─┐
-├── dnstap-collector/            │
-├── clickhouse/                  │  Stack DNS — versionada no Git
-├── clickhouse-ui/                │  (ver "Estrutura de arquivos" abaixo)
-├── grafana/                      │
-├── network/                     ─┘
+├── dnstap-collector/            │  Stack DNS — versionada no Git
+├── clickhouse/                  │  (ver "Estrutura de arquivos" abaixo)
+├── clickhouse-ui/                │
+├── grafana/                     ─┘
 ├── dnstap/                       Runtime: socket Unix compartilhado (gerado)
 │
 ├── projetos/                    NÃO versionado — projetos avulsos de infra
@@ -137,9 +136,6 @@ servidor-dns-v2.0/
 │   ├── docker-compose.yml       — Container Unbound
 │   └── conf/
 │       └── unbound.conf         — Configuração Unbound + dnstap
-├── network/
-│   ├── README.md                — Ajustes de rede fora do Docker (MSS clamping IPv6)
-│   └── restore-ip6tables.service — Serviço systemd para persistir regras ip6tables
 ├── .env.example                 — Modelo de variáveis de ambiente
 ├── .gitignore                   — Ignora .env e dados locais
 └── README.md                    — Este arquivo

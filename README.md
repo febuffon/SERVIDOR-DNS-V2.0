@@ -1,3 +1,59 @@
+# IA.CONFIG
+
+Workspace de infraestrutura e automação de rede. Contém dois tipos de conteúdo
+bem distintos, separados fisicamente para não misturar o que é versionado
+(repositório Git público) com o que é armazenamento local de projetos:
+
+1. **Servidor DNS Recursivo v2.0** — a stack Docker documentada neste README,
+   versionada em `gitea.flexnet.in/luiz.fernando/servidor-dns-v2.0` e
+   `github.com/febuffon/SERVIDOR-DNS-V2.0`.
+2. **`projetos/`** — scripts, evidências, relatórios e configs de outras
+   tarefas de infraestrutura (OLTs Datacom, roteadores, Wi-Fi mesh etc.), que
+   ficam **fora do controle de versão** (ver `.gitignore`).
+
+## Estrutura geral da pasta
+
+```
+IA.CONFIG/
+├── unbound/                   ─┐
+├── dnstap-collector/            │
+├── clickhouse/                  │  Stack DNS — versionada no Git
+├── clickhouse-ui/                │  (ver "Estrutura de arquivos" abaixo)
+├── grafana/                      │
+├── network/                     ─┘
+├── dnstap/                       Runtime: socket Unix compartilhado (gerado)
+│
+├── projetos/                    NÃO versionado — projetos avulsos de infra
+│   ├── scripts-automacao/         Scripts Python: OLT, router, Wi-Fi, automação
+│   ├── configs-olt/               Configs/backups de OLT (.cfg, running-config)
+│   ├── evidencias-screenshots/    Prints de troubleshooting (roteadores, APs)
+│   ├── relatorios-pdf/            Laudos técnicos e relatórios finais (PDF+MD)
+│   ├── paginas-html-debug/        HTMLs capturados durante automação/debug
+│   ├── documentacao-datacom/      Manuais DmOS/DM4615 e docs de migração
+│   ├── diagnosticos/              Scripts shell de teste de rede
+│   └── diversos/                  Logs avulsos e demais arquivos não categorizados
+│
+├── REFERENCE_SKILLS_LIBRARY/    Biblioteca de skills sanitizadas (datacom,
+│                                 mikrotik, zyxel, alarmes, networking)
+│
+├── *.skill                      Skills operacionais ativas (raiz, lidas por
+│                                 GEMINI.md e outros agentes)
+├── GEMINI.md, tools.md,          Contrato de acesso/credenciais para agentes
+│   acesso_olt02.md               (mantidos na raiz por serem referenciados
+│                                 entre si)
+│
+├── _archive/                    Configs antigas de DNS, mantidas como
+│                                 histórico (substituídas pela stack atual)
+└── scratch/                     Scratch space para testes pontuais (Playwright etc.)
+```
+
+**Regra prática:** se for adicionar algo novo relacionado ao servidor DNS,
+segue no padrão de pastas já existente (`unbound/`, `clickhouse/` etc). Se for
+um script ou evidência de outra tarefa de infraestrutura, vai em
+`projetos/<categoria>/`.
+
+---
+
 # DNS Recursivo de Alta Performance v2.0
 
 Stack completa de DNS recursivo para ISPs com telemetria em tempo real, dashboards e interface SQL.
@@ -40,7 +96,12 @@ ClickHouse  (:8123 / :9000)
 - 8 vCPU / 13GB RAM (mínimo recomendado)
 - Disco NVMe
 
-## Estrutura de arquivos
+## Estrutura de arquivos (escopo versionado no Git)
+
+> Esta é a visão do repositório `servidor-dns-v2.0` isoladamente — o
+> `.gitignore` ignora tudo que não está listado aqui, então mesmo que existam
+> outras pastas em `IA.CONFIG/` (ver `projetos/` na seção anterior), só o que
+> segue abaixo é versionado.
 
 ```
 servidor-dns-v2.0/

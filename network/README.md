@@ -20,7 +20,8 @@ o MSS TCP (`TCP_MAXSEG`) — funciona até MSS 1432, quebra a partir de 1433.
 de saída a negociar MSS máximo de 1432, eliminando a dependência do PMTUD
 (que está quebrado).
 
-Diagnóstico completo: `LAUDO_TECNICO_XBOX_IPV6_MTUD.pdf` (raiz do repo).
+Diagnóstico completo: `LAUDO_TECNICO_XBOX_IPV6_MTUD.pdf` (não versionado,
+armazenado localmente em `IA.CONFIG/projetos/relatorios-pdf/`).
 
 ### Aplicar manualmente
 

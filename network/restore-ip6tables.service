@@ -1,0 +1,11 @@
+[Unit]
+Description=Restore ip6tables rules
+Before=network-pre.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/sbin/ip6tables-restore /etc/iptables/rules.v6
+RemainAfterExit=yes
+
+[Install]
+WantedBy=network-pre.target

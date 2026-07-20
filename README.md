@@ -76,6 +76,9 @@ servidor-dns-v2.0/
 │   ├── docker-compose.yml       — Container Unbound
 │   └── conf/
 │       └── unbound.conf         — Configuração Unbound + dnstap
+├── network/
+│   ├── README.md                — Ajustes de rede fora do Docker (MSS clamping IPv6)
+│   └── restore-ip6tables.service — Serviço systemd para persistir regras ip6tables
 ├── .env.example                 — Modelo de variáveis de ambiente
 ├── .gitignore                   — Ignora .env e dados locais
 └── README.md                    — Este arquivo

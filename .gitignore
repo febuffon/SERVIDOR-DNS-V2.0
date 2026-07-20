@@ -15,6 +15,8 @@
 !clickhouse-ui/**
 !unbound/
 !unbound/**
+!network/
+!network/**
 
 # Ignora .env com senhas reais
 .env

@@ -691,7 +691,7 @@
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "purple"
+                  "fixedColor": "green"
                 }
               }
             ]
@@ -706,7 +706,7 @@
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "blue"
+                  "fixedColor": "orange"
                 }
               }
             ]
@@ -721,7 +721,12 @@
             "lastNotNull"
           ]
         },
-        "showUnfilled": true
+        "showUnfilled": true,
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        }
       },
       "targets": [
         {

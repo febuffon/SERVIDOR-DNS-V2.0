@@ -244,12 +244,14 @@ docker exec clickhouse clickhouse-client \
 | **ClickHouse UI** | `http://SEU-IP:8080` | — |
 | **ClickHouse Play** | `http://SEU-IP:8123/play` | admin / sua_senha |
 | **Prometheus metrics** | `http://SEU-IP:9363/metrics` | — |
-| **Zabbix Web** | `http://SEU-IP:8081` | Admin / zabbix (trocar no primeiro acesso) |
+| **Zabbix Web** | `http://SEU-IP:8081` | Admin / (senha trocada no primeiro deploy — ver `zabbix/.env`) |
 
 ## Monitoramento com Zabbix
 
 Stack separada em `zabbix/` (PostgreSQL + Zabbix Server + Zabbix Web + Zabbix
-Agent2), monitorando o próprio servidor DNS:
+Agent2), monitorando o próprio servidor DNS e hosts externos adicionais.
+
+### Host "dns-cgr01" (servidor DNS local)
 
 - **Unbound**: estatísticas via `unbound-control` (queries, cache hit/miss,
   timeouts, latência de recursão) — chaves `dns.unbound.stat[<chave>]`,
@@ -268,8 +270,23 @@ Server/Web/PostgreSQL rodam numa rede bridge isolada (`zabbix-net`) e
 acessam o agent via IP do gateway da bridge — configurado como
 `ZBX_PASSIVESERVERS`/`ZBX_ACTIVESERVERS` no `docker-compose.yml`.
 
-Host, items, triggers e a discovery rule de containers já são criados via
-API JSON-RPC do Zabbix (não é necessário configurar manualmente pela UI).
+### Outros hosts monitorados
+
+- **Casa do Luiz** (`45.178.155.56`, grupo "Monitoramento Externo") —
+  monitorado via ICMP nativo do Zabbix Server (`fping`), sem agent
+  instalado: ping (up/down), tempo de resposta e perda de pacotes.
+
+### Dashboard nativo
+
+Dashboard **"Servidor DNS - Monitoramento"** (Zabbix Web → Dashboards) com
+painel de problemas ativos + gráficos de Unbound (queries/cache, timeouts,
+latência de recursão), ClickHouse (queries), recursos do host (CPU,
+memória, disco) e latência ICMP da "Casa do Luiz".
+
+Host, grupos, items, triggers, gráficos, discovery rule de containers e o
+dashboard são criados via API JSON-RPC do Zabbix (não é necessário
+configurar manualmente pela UI para replicar este setup, embora novos hosts
+avulsos possam ser adicionados pela UI em Data collection → Hosts).
 
 ## Configuração do Unbound
 

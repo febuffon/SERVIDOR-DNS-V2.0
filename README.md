@@ -29,17 +29,17 @@ IA.CONFIG/
 │   ├── relatorios-pdf/            Laudos técnicos e relatórios finais (PDF+MD)
 │   ├── paginas-html-debug/        HTMLs capturados durante automação/debug
 │   ├── documentacao-datacom/      Manuais DmOS/DM4615 e docs de migração
+│   ├── dmos-skills/                Skills empacotadas (SKILL.md + scripts/assets)
+│   ├── acessos-credenciais/       Credenciais de acesso a OLTs (tools.md etc.)
 │   ├── diagnosticos/              Scripts shell de teste de rede
 │   └── diversos/                  Logs avulsos e demais arquivos não categorizados
 │
 ├── REFERENCE_SKILLS_LIBRARY/    Biblioteca de skills sanitizadas (datacom,
-│                                 mikrotik, zyxel, alarmes, networking)
+│                                 mikrotik, zyxel, alarmes, networking) — ver
+│                                 INDEX.md
 │
-├── *.skill                      Skills operacionais ativas (raiz, lidas por
-│                                 GEMINI.md e outros agentes)
-├── GEMINI.md, tools.md,          Contrato de acesso/credenciais para agentes
-│   acesso_olt02.md               (mantidos na raiz por serem referenciados
-│                                 entre si)
+├── GEMINI.md                    Contrato/mandatos do agente (mantido na raiz
+│                                 para auto-carregamento pelos agentes IA)
 │
 ├── _archive/                    Configs antigas de DNS, mantidas como
 │                                 histórico (substituídas pela stack atual)
@@ -49,7 +49,8 @@ IA.CONFIG/
 **Regra prática:** se for adicionar algo novo relacionado ao servidor DNS,
 segue no padrão de pastas já existente (`unbound/`, `clickhouse/` etc). Se for
 um script ou evidência de outra tarefa de infraestrutura, vai em
-`projetos/<categoria>/`.
+`projetos/<categoria>/`. Skills de troubleshooting/procedimentos técnicos vão
+em `REFERENCE_SKILLS_LIBRARY/<categoria>/`.
 
 ---
 

@@ -128,6 +128,12 @@ func (ins *Inserter) Run(ctx context.Context, msgCh <-chan []byte) {
 					}
 					delete(ins.pending, corrKey)
 				}
+				// Heuristica de cache hit: resposta recursiva (RA=1, AA=0)
+				// resolvida muito rapido (<2ms) indica que veio do cache
+				// local do Unbound, sem ida ao upstream.
+				if row.Rcode != "-" && row.LatencyUs > 0 && row.LatencyUs < 2000 {
+					row.FromCache = 1
+				}
 			}
 
 			batch = append(batch, row)
@@ -301,11 +307,8 @@ func parseFrame(frame []byte, serverID string) (DNSRow, string, bool, error) {
 					row.AdFlag = 1
 				}
 
-				// Detecta cache hit: AA=false, RA=true, latencia muito baixa
-				// ou via flag TC (truncated indica resolucao local)
-				if dnsMsg.RecursionAvailable && !dnsMsg.Authoritative {
-					row.FromCache = 0
-				}
+				// FromCache e calculado em Run() apos a correlacao de latencia
+				// (aqui ainda nao temos LatencyUs disponivel)
 			} else {
 				// Query: sem rcode ainda
 				row.Rcode = "-"

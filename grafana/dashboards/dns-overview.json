@@ -659,7 +659,7 @@
     {
       "id": 18,
       "title": "Proporção IPv4 (A) vs IPv6 (AAAA)",
-      "type": "bargauge",
+      "type": "barchart",
       "gridPos": {
         "x": 0,
         "y": 23,
@@ -676,6 +676,10 @@
           "min": 0,
           "max": 100,
           "decimals": 1,
+          "custom": {
+            "fillOpacity": 80,
+            "lineWidth": 1
+          },
           "color": {
             "mode": "palette-classic"
           }
@@ -715,17 +719,16 @@
       },
       "options": {
         "orientation": "horizontal",
-        "displayMode": "gradient",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ]
-        },
-        "showUnfilled": true,
+        "xTickLabelRotation": 0,
+        "showValue": "always",
+        "stacking": "none",
         "legend": {
           "displayMode": "list",
           "placement": "bottom",
           "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single"
         }
       },
       "targets": [

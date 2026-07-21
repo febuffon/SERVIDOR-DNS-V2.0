@@ -17,6 +17,8 @@
 !unbound/**
 !network/
 !network/**
+!zabbix/
+!zabbix/**
 
 # Ignora .env com senhas reais
 .env

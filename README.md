@@ -19,7 +19,8 @@ IA.CONFIG/
 ├── dnstap-collector/            │  Stack DNS — versionada no Git
 ├── clickhouse/                  │  (ver "Estrutura de arquivos" abaixo)
 ├── clickhouse-ui/                │
-├── grafana/                     ─┘
+├── grafana/                      │
+├── zabbix/                      ─┘  Monitoramento (server/web/agent/postgres)
 ├── dnstap/                       Runtime: socket Unix compartilhado (gerado)
 │
 ├── projetos/                    NÃO versionado — projetos avulsos de infra
@@ -65,16 +66,21 @@ Clientes
     │
     ▼
 Unbound DNS  (porta 53 / 5300)
-    │ dnstap (socket Unix)
-    ▼
-dnstap-collector  (Go)
-    │ INSERT em batch
-    ▼
-ClickHouse  (:8123 / :9000)
-    │ Materialized Views automáticas
+    │ dnstap (socket Unix)          │ unbound-control (127.0.0.1:8953)
+    ▼                               ▼
+dnstap-collector  (Go)         Zabbix Agent2  (UserParameters dns.unbound.stat[*])
+    │ INSERT em batch               │
+    ▼                               ▼
+ClickHouse  (:8123 / :9000)◄────Zabbix Agent2 (dns.clickhouse.stat[*] via Prometheus :9363)
+    │ Materialized Views automáticas       │
     ├── Grafana  (:3000)        — Dashboards em tempo real
     ├── ClickHouse UI  (:8080)  — Interface SQL interativa
     └── Prometheus  (:9363)     — Métricas para Zabbix
+                                       │
+                                       ▼
+                              Zabbix Server (:10051) ── PostgreSQL
+                                       │
+                              Zabbix Web  (:8081)  — Alertas/Triggers/LLD Docker
 ```
 
 ## Componentes
@@ -87,6 +93,7 @@ ClickHouse  (:8123 / :9000)
 | Dashboards | Grafana 11.1 (Docker) | 3000 |
 | Interface SQL | Nginx + HTML (Docker) | 8080 |
 | Métricas | Prometheus endpoint | 9363 |
+| Monitoramento | Zabbix 7.0 LTS (Server/Web/Agent2 + PostgreSQL) | 8081 (web) / 10051 (server) |
 
 ## Pré-requisitos
 
@@ -137,6 +144,17 @@ servidor-dns-v2.0/
 │   ├── docker-compose.yml       — Container Unbound
 │   └── conf/
 │       └── unbound.conf         — Configuração Unbound + dnstap
+├── zabbix/
+│   ├── docker-compose.yml       — PostgreSQL + Zabbix Server + Web + Agent2
+│   ├── .env.example             — Modelo de senha do PostgreSQL do Zabbix
+│   ├── agent-config/
+│   │   ├── Dockerfile           — Agent2 Alpine + unbound-control + docker-cli
+│   │   ├── zabbix_agent2.d/
+│   │   │   └── dns_stack.conf   — UserParameters dns.unbound.stat[*] e dns.clickhouse.stat[*]
+│   │   └── scripts/
+│   │       ├── unbound_stat.sh      — Wrapper unbound-control stats_noreset
+│   │       └── clickhouse_stat.sh   — Wrapper curl no endpoint Prometheus :9363
+│   └── alertscripts/            — Scripts de notificação custom (vazio por padrão)
 ├── .env.example                 — Modelo de variáveis de ambiente
 ├── .gitignore                   — Ignora .env e dados locais
 └── README.md                    — Este arquivo
@@ -195,6 +213,10 @@ cd ../grafana && docker compose up -d
 
 # Interface SQL
 cd ../clickhouse-ui && docker compose up -d
+
+# Zabbix (monitoramento) - opcional, sobe por ultimo
+cd ../zabbix && cp .env.example .env && nano .env
+docker compose up -d
 ```
 
 > **Importante:** o `dnstap-collector` deve subir **antes** do Unbound. O Unbound conecta no socket ao iniciar e não tenta reconectar sozinho.
@@ -222,6 +244,32 @@ docker exec clickhouse clickhouse-client \
 | **ClickHouse UI** | `http://SEU-IP:8080` | — |
 | **ClickHouse Play** | `http://SEU-IP:8123/play` | admin / sua_senha |
 | **Prometheus metrics** | `http://SEU-IP:9363/metrics` | — |
+| **Zabbix Web** | `http://SEU-IP:8081` | Admin / zabbix (trocar no primeiro acesso) |
+
+## Monitoramento com Zabbix
+
+Stack separada em `zabbix/` (PostgreSQL + Zabbix Server + Zabbix Web + Zabbix
+Agent2), monitorando o próprio servidor DNS:
+
+- **Unbound**: estatísticas via `unbound-control` (queries, cache hit/miss,
+  timeouts, latência de recursão) — chaves `dns.unbound.stat[<chave>]`,
+  mesmas chaves de `unbound-control stats_noreset`.
+- **ClickHouse**: métricas via endpoint Prometheus (`:9363/metrics`) — chaves
+  `dns.clickhouse.stat[<metrica>]`.
+- **Docker**: plugin nativo do Zabbix Agent2 (`docker.*`), com discovery
+  automático (LLD) de todos os containers do host e trigger de alerta se
+  algum parar de responder `running`.
+- **Host**: CPU load, memória disponível, espaço em disco, uptime (itens
+  padrão do Zabbix Agent2).
+
+O Zabbix Agent2 roda em `network_mode: host` (necessário para acessar
+`unbound-control` em `127.0.0.1:8953` e o socket Docker sem NAT). O Zabbix
+Server/Web/PostgreSQL rodam numa rede bridge isolada (`zabbix-net`) e
+acessam o agent via IP do gateway da bridge — configurado como
+`ZBX_PASSIVESERVERS`/`ZBX_ACTIVESERVERS` no `docker-compose.yml`.
+
+Host, items, triggers e a discovery rule de containers já são criados via
+API JSON-RPC do Zabbix (não é necessário configurar manualmente pela UI).
 
 ## Configuração do Unbound
 

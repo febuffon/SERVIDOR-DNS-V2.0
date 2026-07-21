@@ -1,0 +1,197 @@
+# ============================================================
+# Zabbix - Monitoramento do Servidor DNS (Unbound/ClickHouse/Docker)
+# Servidor: Ubuntu 22.04 | 8 vCPU | 13GB RAM | NVMe
+# Stack: PostgreSQL + Zabbix Server + Zabbix Web (Nginx) + Zabbix Agent2
+# ============================================================
+
+services:
+  zabbix-postgres:
+    image: postgres:16-alpine
+    container_name: zabbix-postgres
+    restart: unless-stopped
+    hostname: zabbix-postgres
+
+    environment:
+      POSTGRES_USER: zabbix
+      POSTGRES_PASSWORD: ${ZABBIX_DB_PASSWORD:-changeme}
+      POSTGRES_DB: zabbix
+
+    volumes:
+      - zabbix-postgres-data:/var/lib/postgresql/data
+
+    networks:
+      - zabbix-net
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U zabbix -d zabbix"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
+
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 512M
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "3"
+
+  zabbix-server:
+    image: zabbix/zabbix-server-pgsql:alpine-7.0-latest
+    container_name: zabbix-server
+    restart: unless-stopped
+    hostname: zabbix-server
+
+    depends_on:
+      zabbix-postgres:
+        condition: service_healthy
+
+    environment:
+      DB_SERVER_HOST: zabbix-postgres
+      POSTGRES_USER: zabbix
+      POSTGRES_PASSWORD: ${ZABBIX_DB_PASSWORD:-changeme}
+      POSTGRES_DB: zabbix
+      ZBX_CACHESIZE: 32M
+      ZBX_HISTORYCACHESIZE: 32M
+      ZBX_STARTPOLLERS: 10
+      ZBX_STARTPOLLERSUNREACHABLE: 5
+
+    ports:
+      - "10051:10051"
+
+    volumes:
+      - zabbix-server-data:/var/lib/zabbix
+      - ./alertscripts:/usr/lib/zabbix/alertscripts:ro
+
+    networks:
+      - zabbix-net
+
+    healthcheck:
+      test: ["CMD-SHELL", "zabbix_server -R config_cache_reload || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 6
+      start_period: 30s
+
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 1G
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
+
+  zabbix-web:
+    image: zabbix/zabbix-web-nginx-pgsql:alpine-7.0-latest
+    container_name: zabbix-web
+    restart: unless-stopped
+    hostname: zabbix-web
+
+    depends_on:
+      zabbix-postgres:
+        condition: service_healthy
+      zabbix-server:
+        condition: service_started
+
+    environment:
+      DB_SERVER_HOST: zabbix-postgres
+      POSTGRES_USER: zabbix
+      POSTGRES_PASSWORD: ${ZABBIX_DB_PASSWORD:-changeme}
+      POSTGRES_DB: zabbix
+      ZBX_SERVER_HOST: zabbix-server
+      ZBX_SERVER_NAME: "FlexNet DNS Monitoring"
+      PHP_TZ: America/Sao_Paulo
+
+    ports:
+      - "8081:8080"
+
+    networks:
+      - zabbix-net
+
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080/"]
+      interval: 15s
+      timeout: 5s
+      retries: 6
+      start_period: 30s
+
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 512M
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "3"
+
+  zabbix-agent:
+    build:
+      context: ./agent-config
+      dockerfile: Dockerfile
+    image: zabbix-agent2-dns:latest
+    container_name: zabbix-agent
+    restart: unless-stopped
+    hostname: dns-cgr01
+
+    # Rede do host: necessario para o unbound-control (127.0.0.1:8953)
+    # e para coletar metricas de containers/host sem NAT
+    network_mode: host
+
+    # Acesso ao socket Docker para monitorar saude dos containers
+    # e ao unbound.conf (control-interface: 127.0.0.1, sem cert) para
+    # o unbound-control instalado dentro desta mesma imagem
+    environment:
+      ZBX_HOSTNAME: dns-cgr01
+      ZBX_PASSIVESERVERS: 127.0.0.1,172.16.0.0/12
+      ZBX_ACTIVESERVERS: 127.0.0.1
+
+    volumes:
+      - ./agent-config/zabbix_agent2.d/dns_stack.conf:/etc/zabbix/zabbix_agentd.d/dns_stack.conf:ro
+      - ./agent-config/scripts:/etc/zabbix/scripts:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ../unbound/conf/unbound.conf:/etc/unbound/unbound.conf:ro
+    group_add:
+      - "143"
+
+    depends_on:
+      zabbix-server:
+        condition: service_healthy
+
+    healthcheck:
+      test: ["CMD", "zabbix_agent2", "-t", "agent.ping"]
+      interval: 15s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
+
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "3"
+
+networks:
+  zabbix-net:
+    driver: bridge
+
+volumes:
+  zabbix-postgres-data:
+  zabbix-server-data:

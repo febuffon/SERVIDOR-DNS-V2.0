@@ -41,12 +41,12 @@ func main() {
 
 	go handleSignals(cancel)
 	go ins.Run(ctx, msgCh)
-	listenSocket(ctx, socketPath, msgCh)
+	listenSocket(ctx, socketPath, msgCh, ins)
 
 	log.Println("[collector] encerrado")
 }
 
-func listenSocket(ctx context.Context, socketPath string, msgCh chan<- []byte) {
+func listenSocket(ctx context.Context, socketPath string, msgCh chan<- []byte, ins *Inserter) {
 	_ = os.Remove(socketPath)
 
 	ln, err := net.Listen("unix", socketPath)
@@ -82,11 +82,11 @@ func listenSocket(ctx context.Context, socketPath string, msgCh chan<- []byte) {
 			}
 		}
 		log.Println("[collector] Unbound conectado")
-		go handleConn(ctx, conn, msgCh)
+		go handleConn(ctx, conn, msgCh, ins)
 	}
 }
 
-func handleConn(ctx context.Context, conn net.Conn, msgCh chan<- []byte) {
+func handleConn(ctx context.Context, conn net.Conn, msgCh chan<- []byte, ins *Inserter) {
 	defer func() {
 		conn.Close()
 		log.Println("[collector] conexao encerrada")
@@ -132,6 +132,7 @@ func handleConn(ctx context.Context, conn net.Conn, msgCh chan<- []byte) {
 		select {
 		case msgCh <- buf:
 		default:
+			ins.RecordDroppedFrame()
 			log.Println("[collector] canal cheio, frame descartado")
 		}
 	}

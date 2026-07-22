@@ -7,12 +7,21 @@ import (
 	"log"
 	"net"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/ClickHouse/clickhouse-go/v2"
 	dnstap "github.com/dnstap/golang-dnstap"
 	"github.com/miekg/dns"
 	"google.golang.org/protobuf/proto"
+)
+
+// Numero de tentativas de flush antes de descartar o batch, e o intervalo
+// base entre elas (backoff exponencial simples: base, 2*base, 4*base...).
+const (
+	flushMaxRetries  = 3
+	flushRetryBase   = 500 * time.Millisecond
+	statsLogInterval = 60 * time.Second
 )
 
 // DNSRow representa uma linha a inserir em dns_telemetry.dns_queries
@@ -51,6 +60,13 @@ type Inserter struct {
 	// já que o Unbound emite frames separados: query_time só vem no frame de
 	// query e response_time só vem no frame de resposta.
 	pending map[string]pendingQuery
+
+	// Contadores de observabilidade (acessados por multiple goroutines: Run()
+	// e o listener do socket em main.go) - expostos via log periodico e
+	// disponiveis para health-check externo futuro (Zabbix/Prometheus).
+	droppedFrames  atomic.Uint64 // frames descartados por canal cheio (main.go)
+	failedRows     atomic.Uint64 // linhas perdidas apos esgotar retries de flush
+	insertedRows   atomic.Uint64 // linhas inseridas com sucesso
 }
 
 func NewInserter(dsn, serverID string, batchSize int, flushInterval time.Duration) (*Inserter, error) {
@@ -103,11 +119,14 @@ func (ins *Inserter) Run(ctx context.Context, msgCh <-chan []byte) {
 	ticker := time.NewTicker(ins.flushInterval)
 	defer ticker.Stop()
 
+	statsTicker := time.NewTicker(statsLogInterval)
+	defer statsTicker.Stop()
+
 	for {
 		select {
 		case <-ctx.Done():
 			if len(batch) > 0 {
-				ins.flush(batch)
+				ins.flushWithRetry(batch)
 			}
 			return
 
@@ -138,17 +157,35 @@ func (ins *Inserter) Run(ctx context.Context, msgCh <-chan []byte) {
 
 			batch = append(batch, row)
 			if len(batch) >= ins.batchSize {
-				ins.flush(batch)
+				ins.flushWithRetry(batch)
 				batch = batch[:0]
 			}
 
 		case <-ticker.C:
 			if len(batch) > 0 {
-				ins.flush(batch)
+				ins.flushWithRetry(batch)
 				batch = batch[:0]
 			}
 			ins.cleanupPending()
+
+		case <-statsTicker.C:
+			ins.logStats()
 		}
+	}
+}
+
+// logStats reporta contadores acumulados desde o inicio do processo -
+// util para detectar perda de dados (canal cheio ou flush falhando) sem
+// precisar grep-ar cada linha de log individual.
+func (ins *Inserter) logStats() {
+	dropped := ins.droppedFrames.Load()
+	failed := ins.failedRows.Load()
+	inserted := ins.insertedRows.Load()
+	if dropped > 0 || failed > 0 {
+		log.Printf("[inserter] stats | inserted=%d dropped_frames=%d failed_rows=%d",
+			inserted, dropped, failed)
+	} else {
+		log.Printf("[inserter] stats | inserted=%d (sem perdas)", inserted)
 	}
 }
 
@@ -162,8 +199,31 @@ func (ins *Inserter) cleanupPending() {
 	}
 }
 
-// flush envia o batch para o ClickHouse
-func (ins *Inserter) flush(rows []DNSRow) {
+// flushWithRetry tenta o flush ate flushMaxRetries vezes com backoff
+// exponencial antes de desistir do batch. Falhas transitorias de rede/
+// ClickHouse (reinicio do container, timeout momentaneo) nao devem
+// resultar em perda imediata de dados.
+func (ins *Inserter) flushWithRetry(rows []DNSRow) {
+	var err error
+	for attempt := 0; attempt <= flushMaxRetries; attempt++ {
+		if attempt > 0 {
+			backoff := flushRetryBase * time.Duration(1<<(attempt-1))
+			log.Printf("[inserter] retry %d/%d em %s (batch=%d)", attempt, flushMaxRetries, backoff, len(rows))
+			time.Sleep(backoff)
+		}
+		if err = ins.flush(rows); err == nil {
+			ins.insertedRows.Add(uint64(len(rows)))
+			return
+		}
+	}
+	ins.failedRows.Add(uint64(len(rows)))
+	log.Printf("[inserter] desistindo apos %d tentativas, %d linhas perdidas: %v", flushMaxRetries, len(rows), err)
+}
+
+// flush envia o batch para o ClickHouse. Retorna erro em caso de falha,
+// sem logar diretamente (quem loga eh o chamador, que sabe o contexto de
+// retry).
+func (ins *Inserter) flush(rows []DNSRow) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -173,8 +233,7 @@ func (ins *Inserter) flush(rows []DNSRow) {
 		  qname, qtype, qclass, rcode, answer_count, latency_us,
 		  from_cache, response_size, do_flag, ad_flag)`)
 	if err != nil {
-		log.Printf("[inserter] PrepareBatch erro: %v", err)
-		return
+		return fmt.Errorf("PrepareBatch: %w", err)
 	}
 
 	for _, r := range rows {
@@ -183,16 +242,22 @@ func (ins *Inserter) flush(rows []DNSRow) {
 			r.Qname, r.Qtype, r.Qclass, r.Rcode, r.AnswerCount, r.LatencyUs,
 			r.FromCache, r.ResponseSize, r.DoFlag, r.AdFlag,
 		); err != nil {
-			log.Printf("[inserter] Append erro: %v", err)
+			log.Printf("[inserter] Append erro (linha ignorada): %v", err)
 		}
 	}
 
 	if err := b.Send(); err != nil {
-		log.Printf("[inserter] Send erro (batch=%d): %v", len(rows), err)
-		return
+		return fmt.Errorf("Send (batch=%d): %w", len(rows), err)
 	}
 
 	log.Printf("[inserter] flush OK | %d rows", len(rows))
+	return nil
+}
+
+// RecordDroppedFrame incrementa o contador de frames descartados por
+// canal cheio (chamado a partir de main.go/handleConn).
+func (ins *Inserter) RecordDroppedFrame() {
+	ins.droppedFrames.Add(1)
 }
 
 // parseFrame converte um frame dnstap protobuf em DNSRow.

@@ -153,9 +153,16 @@ services:
     # e ao unbound.conf (control-interface: 127.0.0.1, sem cert) para
     # o unbound-control instalado dentro desta mesma imagem
     environment:
+      # ZBX_SERVER_HOST default do entrypoint e "zabbix-server" (hostname do
+      # container zabbix-server na rede bridge), que nao resolve aqui porque
+      # este container roda em network_mode: host (sem DNS interno do
+      # Docker). O entrypoint sempre prefixa ZBX_SERVER_HOST em
+      # ServerActive/Server, entao sem essa var ele tentava resolver
+      # "zabbix-server" e falhava ate cair no fallback 127.0.0.1 da lista.
+      ZBX_SERVER_HOST: 127.0.0.1
       ZBX_HOSTNAME: dns-cgr01
-      ZBX_PASSIVESERVERS: 127.0.0.1,172.16.0.0/12
-      ZBX_ACTIVESERVERS: 127.0.0.1
+      ZBX_PASSIVESERVERS: 172.16.0.0/12
+      ZBX_ACTIVESERVERS: ""
 
     volumes:
       - ./agent-config/zabbix_agent2.d/dns_stack.conf:/etc/zabbix/zabbix_agentd.d/dns_stack.conf:ro

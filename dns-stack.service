@@ -1,0 +1,18 @@
+[Unit]
+Description=DNS Recursivo + Monitoramento (Unbound, ClickHouse, dnstap-collector, Grafana, Zabbix)
+Documentation=file:///home/luiz-fernando/IA.CONFIG/README.md
+After=docker.service network-online.target
+Requires=docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+User=luiz-fernando
+Group=luiz-fernando
+WorkingDirectory=/home/luiz-fernando/IA.CONFIG
+ExecStart=/home/luiz-fernando/IA.CONFIG/start-stack.sh
+TimeoutStartSec=300
+
+[Install]
+WantedBy=multi-user.target

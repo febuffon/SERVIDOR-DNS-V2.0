@@ -221,6 +221,12 @@ docker compose up -d
 
 > **Importante:** o `dnstap-collector` deve subir **antes** do Unbound. O Unbound conecta no socket ao iniciar e não tenta reconectar sozinho.
 
+> **Alternativa:** o script `start-stack.sh` (raiz do repositório) automatiza
+> exatamente essa sequência (ClickHouse → dnstap-collector → Unbound →
+> Grafana/ClickHouse UI → Zabbix), aguardando cada serviço crítico ficar
+> `healthy` antes de seguir para o próximo. É o mesmo script usado pelo
+> serviço systemd de boot (ver seção "Inicialização automática no boot").
+
 ### 6. Verifique o pipeline
 
 ```bash
@@ -245,6 +251,47 @@ docker exec clickhouse clickhouse-client \
 | **ClickHouse Play** | `http://SEU-IP:8123/play` | admin / sua_senha |
 | **Prometheus metrics** | `http://SEU-IP:9363/metrics` | — |
 | **Zabbix Web** | `http://SEU-IP:8081` | Admin / (senha trocada no primeiro deploy — ver `zabbix/.env`) |
+
+## Inicialização automática no boot
+
+A stack completa sobe sozinha quando o servidor (Ubuntu) reinicia, via
+serviço systemd `dns-stack.service`, que executa `start-stack.sh` na ordem
+correta (ClickHouse → dnstap-collector → Unbound → Grafana/ClickHouse UI →
+Zabbix), aguardando cada serviço crítico ficar `healthy` antes de avançar.
+
+Isso é necessário porque `docker compose up -d` sozinho não garante ordem
+entre stacks separadas (cada pasta tem seu próprio `docker-compose.yml`), e
+o Unbound **não** reconecta ao socket dnstap se ele não existir no momento
+em que o Unbound inicia — daí a dependência estrita dnstap-collector →
+Unbound.
+
+### Instalação do serviço (uma vez só)
+
+```bash
+sudo cp dns-stack.service /etc/systemd/system/dns-stack.service
+sudo systemctl daemon-reload
+sudo systemctl enable dns-stack.service
+```
+
+### Comandos úteis
+
+```bash
+# Sobe a stack manualmente (idempotente - não recria containers já rodando)
+sudo systemctl start dns-stack.service
+
+# Ve o status e as ultimas linhas do log de inicializacao
+systemctl status dns-stack.service
+journalctl -u dns-stack.service --no-pager -n 50
+
+# Roda o script diretamente, sem passar pelo systemd (util para debug)
+./start-stack.sh
+```
+
+> Os containers individuais já têm `restart: unless-stopped`, então se um
+> container cair sozinho (crash, OOM) o Docker o reinicia automaticamente
+> sem depender do `dns-stack.service`. O serviço systemd só entra em ação
+> no boot da máquina, para orquestrar a **ordem** de subida entre as
+> diferentes stacks Compose.
 
 ## Monitoramento com Zabbix
 

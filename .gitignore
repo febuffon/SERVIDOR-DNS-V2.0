@@ -5,6 +5,8 @@
 !.gitignore
 !README.md
 !.env.example
+!start-stack.sh
+!dns-stack.service
 !clickhouse/
 !clickhouse/**
 !dnstap-collector/

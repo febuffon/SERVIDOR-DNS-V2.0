@@ -93,12 +93,48 @@
         <ttl>event_date + INTERVAL 7 DAY DELETE</ttl>
     </query_log>
 
-    <!-- Desativa logs desnecessarios -->
-    <query_thread_log remove="1"/>
-    <query_views_log remove="1"/>
-    <part_log remove="1"/>
-    <text_log remove="1"/>
-    <trace_log remove="1"/>
+    <!-- Logs internos desnecessarios para o caso de uso (DNS telemetry).
+         O atributo remove="1" nao tem efeito aqui porque este config.xml
+         e o arquivo base (nao um fragmento de conf.d sobrepondo outro) -
+         o ClickHouse continua usando os defaults internos e gravando essas
+         tabelas mesmo com remove="1". Solucao: redefinir cada uma com TTL
+         curto para limitar o crescimento em disco, em vez de tentar
+         desativa-las (nao suportado nesse ponto de config). -->
+    <query_thread_log>
+        <database>system</database>
+        <table>query_thread_log</table>
+        <flush_interval_milliseconds>15000</flush_interval_milliseconds>
+        <ttl>event_date + INTERVAL 2 DAY DELETE</ttl>
+    </query_thread_log>
+
+    <query_views_log>
+        <database>system</database>
+        <table>query_views_log</table>
+        <flush_interval_milliseconds>15000</flush_interval_milliseconds>
+        <ttl>event_date + INTERVAL 2 DAY DELETE</ttl>
+    </query_views_log>
+
+    <part_log>
+        <database>system</database>
+        <table>part_log</table>
+        <flush_interval_milliseconds>15000</flush_interval_milliseconds>
+        <ttl>event_date + INTERVAL 2 DAY DELETE</ttl>
+    </part_log>
+
+    <text_log>
+        <database>system</database>
+        <table>text_log</table>
+        <flush_interval_milliseconds>15000</flush_interval_milliseconds>
+        <level>warning</level>
+        <ttl>event_date + INTERVAL 2 DAY DELETE</ttl>
+    </text_log>
+
+    <trace_log>
+        <database>system</database>
+        <table>trace_log</table>
+        <flush_interval_milliseconds>15000</flush_interval_milliseconds>
+        <ttl>event_date + INTERVAL 1 DAY DELETE</ttl>
+    </trace_log>
 
     <metric_log>
         <database>system</database>

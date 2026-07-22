@@ -30,3 +30,6 @@ clickhouse/logs/
 grafana/data/
 **/*.sock
 **/*.log
+
+# Ignora dumps de backup (volumosos / dados sensiveis)
+**/backup-scripts/dumps/
